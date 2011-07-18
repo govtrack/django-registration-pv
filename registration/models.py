@@ -25,7 +25,8 @@ class AuthRecord(models.Model):
 	class Meta:
 		verbose_name = "Authentication Record"
 		unique_together = (("provider", "uid"),)
-		ordering = ['provider', 'user__username']
+		# don't add any ordering because it causes mysql filesort on joins
+
 	def __unicode__(self):
 		return self.provider + " " + self.uid[0:10] + " -> " + self.user.username
 

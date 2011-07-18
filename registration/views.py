@@ -7,6 +7,8 @@ from django.contrib.auth.backends import ModelBackend
 from django.template import RequestContext
 from django.contrib import messages
 
+import urlparse
+
 from jquery.ajax import json_response, validation_error_message
 from emailverification.utils import send_email_verification
 
@@ -38,9 +40,9 @@ def loginform(request):
 			if user is not None:
 				if user.is_active:
 					login(request, user)
-					if "next" in request.POST:
+					if request.POST.get("next","").strip() != "":
 						try:
-							validate_next(request.POST["next"]) # raises exception on error
+							validate_next(request, request.POST["next"]) # raises exception on error
 							return HttpResponseRedirect(request.POST["next"])
 						except Exception, e:
 							#print e
@@ -77,9 +79,28 @@ class EmailPasswordLoginBackend(ModelBackend):
 			pass
 		return None
 
-def validate_next(next):
+def validate_next(request, next):
+	# We must not allow anyone to use the redirection that occurs in logins
+	# to create an open redirector to spoof URLs.
+	
+	# The easiest thing to do would be to only allow local URLs to be redirected
+	# to, however if we're operating in an iframe then we may want to open
+	# a OAuth lijnk a link with target=_top (otherwise Chrome loses the referer
+	# header which happens to be important to me) and a next= that is off
+	# our domain but to a page that will re-load the widget. Sooooo... we'll allow
+	# unrestricted next= if the referer is on our domain. (nb. <base target="_top"/>)
+	try:
+		if urlparse.urlparse(request.META.get("HTTP_REFERER", "http://www.example.org/")).hostname == urlparse.urlparse(SITE_ROOT_URL).hostname:
+			return
+	except: # invalid referrer header
+		pass
+
+	# Check that the page is a local page by running it through URLConf's reverse.
+	
 	if "#" in next: # chop off fragment
 		next = next[0:next.index("#")]
+	if "?" in next: # chop off query string
+		next = next[0:next.index("?")]
 	if next[0:len(SITE_ROOT_URL)] == SITE_ROOT_URL:
 		next = next[len(SITE_ROOT_URL):]
 	func, args, kwargs = resolve(next) # validate that it's on our site. raises a Http404, though maybe wrapping it in a 403 would be better
@@ -92,20 +113,35 @@ def external_start(request, login_associate, provider):
 		login_associate = "login"
 
 	if "next" in request.GET:
-		validate_next(request.GET["next"]) # raises exception on error
+		validate_next(request, request.GET["next"]) # raises exception on error
 		request.session["oauth_finish_next"] = request.GET["next"]
 		
-	callback = SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider])
+	if providers.providers[provider]["method"] =="openid2" or True:
+		# the callback must match the realm, which is always SITE_ROOT_URL
+		callback = SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider])
+	else:
+		# be nicer and build the callback URL from the HttpRequest, in case we are not
+		# hosting SITE_ROOT_URL (i.e. debugging).
+		callback = request.build_absolute_uri(reverse(external_return, args=[login_associate, provider]))
+	request.session["oauth_finish_url"] = callback
 
 	scope = request.GET.get("scope", None)
-	return HttpResponseRedirect( providers.methods[providers.providers[provider]["method"]]["get_redirect"](request, provider, callback, scope))
+	mode = request.GET.get("mode", None)
+
+	response = HttpResponseRedirect( providers.methods[providers.providers[provider]["method"]]["get_redirect"](request, provider, callback, scope, mode))
+	response['Cache-Control'] = 'no-store'
+	return response
 		
 def external_return(request, login_associate, provider):
 	try:
-		(provider, auth_token, profile) = \
-			providers.methods[providers.providers[provider]["method"]] \
-			["finish_authentication"] \
-			(request, provider, SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider]))
+		finish_authentication = providers.methods[providers.providers[provider]["method"]]["finish_authentication"]
+		
+		(provider, auth_token, profile) = finish_authentication(
+			request,
+			provider,
+			request.session["oauth_finish_url"]
+			)
+		del request.session["oauth_finish_url"]
 	except providers.UserCancelledAuthentication:
 		request.goal = { "goal": "oauth-cancel" }
 		return HttpResponseRedirect(request.session["oauth_finish_next"] if "oauth_finish_next" in request.session else reverse(loginform))
@@ -241,38 +277,30 @@ def external_finish(request):
 	# Recover session info.
 	(provider, auth_token, profile, uid, next) = request.session["registration_credentials"]
 	
-	if not "email" in request.POST:
+	if not "username" in request.POST:
 		username = ""
 		if "screen_name" in profile:
 			username = profile["screen_name"]
 		elif "email" in profile and "@" in profile["email"]:
 			username = profile["email"][0:profile["email"].index("@")]
-
-		try:
-			email = validate_email(profile["email"]) # beware of Facebook proxy email addresses which overrun the length limit on an email field
-		except:
-			email = None
 		
 		# Show the form where the user can choose a username and email address.
 		return render_to_response('registration/oauth_create_account.html',
 			{
 				"provider": provider,
 				"username": username,
-				"email": email,
+				"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
 			},
 			context_instance=RequestContext(request))
 		
 	# Validation
 		
 	error = ""
-	
-	if "username" in request.POST:
-		try:
-			username = validate_username(request.POST["username"])
-		except Exception, e:
-			error += validation_error_message(e) + " "
-	else:
-		username = request.POST["email"]
+		
+	try:
+		username = validate_username(request.POST["username"])
+	except Exception, e:
+		error += validation_error_message(e) + " "
 		
 	try:
 		email = validate_email(request.POST["email"])
@@ -285,7 +313,7 @@ def external_finish(request):
 		return render_to_response('registration/oauth_create_account.html',
 			{
 				"provider": provider,
-				"username": request.POST.get("username", None),
+				"username": request.POST["username"],
 				"email": request.POST["email"],
 				"error": error
 			},
@@ -399,6 +427,9 @@ def ajax_login(request):
 	password = validate_password(request.POST["password"])
 	user = authenticate(email=email, password=password)
 	if user == None:
+		sso = AuthRecord.objects.filter(user__email=email)
+		if len(sso) >= 1: # could also be the password is wrong
+			return { "status": "fail", "msg": "You use an identity service provider to log in. Click the %s log in button to sign into this site." % " or ".join(set([providers.providers[p.provider]["displayname"] for p in sso])) }
 		return { "status": "fail", "msg": "That's not a username and password combination we have on file." }
 	elif not user.is_active:
 		return { "status": "fail", "msg": "Your account has been disabled." }

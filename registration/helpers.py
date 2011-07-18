@@ -3,26 +3,28 @@ from django.contrib.auth.models import User
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
+import recaptcha.client.captcha
+
+# due to changes on April 21, 2011, we must use a different api server
+if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
+	# these won't work in newer recaptcha lib because it creates the full path differently
+	recaptcha.client.captcha.API_SSL_SERVER="https://www.google.com/recaptcha/api"
+	recaptcha.client.captcha.API_SERVER="http://www.google.com/recaptcha/api"
+	recaptcha.client.captcha.VERIFY_SERVER="www.google.com/recaptcha/api"
+
 from jquery.ajax import validation_error_message
 from emailverification.utils import send_email_verification
 
+from settings import RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY
 from settings import APP_NICE_SHORT_NAME
 
-try:
-	import recaptcha.client.captcha
-	from settings import RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY
-	has_recaptcha = True
-except:
-	has_recaptcha = False
-
 def captcha_html(error = None):
-	if not has_recaptcha: return ""
 	return recaptcha.client.captcha.displayhtml(RECAPTCHA_PUBLIC_KEY, error = error, use_ssl=True)
 
 def validate_captcha(request):
-	if not has_recaptcha: return
 	# This may have to be the last check in a form because if the captcha succeeds, the user
-	# cannot resubmit without a new captcha.
+	# cannot resubmit without a new captcha. (I hope. reCAPTCHA should not be open
+	# to replay-attacks.)
 	try:
 		cx = recaptcha.client.captcha.submit(request.POST["recaptcha_challenge_field"], request.POST["recaptcha_response_field"], RECAPTCHA_PRIVATE_KEY, request.META["REMOTE_ADDR"])
 	except Exception, e:

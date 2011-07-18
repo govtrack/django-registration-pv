@@ -3,7 +3,7 @@
 <ul class="singlesignon">
 {% for provider in ""|new_account_providers %}
 <li>
-	<a class="btn social_{{ provider }}" href="{% url registration.views.external_start "login" provider %}{% if singlesignon_next %}?next={{singlesignon_next}}{% endif %}" style="border: none" title="{{ provider|provider_name }}">
+	<a class="btn social_{{ provider }}" href="{% url registration.views.external_start "login" provider %}{% if singlesignon_next %}?next={{singlesignon_next|urlencode}}{% endif %}{{singlesignon_params}}" style="border: none" title="{{ provider|provider_name }}" {{singlesignon_a_attrs|safe}}>
 		<img src="{{ provider|provider_logo:32 }}" width="32" height="32" alt="{{ provider|provider_name }}"/>
 	</a>
 </li>

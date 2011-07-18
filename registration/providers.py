@@ -116,7 +116,7 @@ try:
 		client = create_oauth1_client("linkedin", access_token)
 		resp, content = client.request("https://api.linkedin.com/v1/people/~:(id,first-name,last-name)", "GET")
 		if resp['status'] != '200':
-			raise Exception("OAuth Failed: Invalid response from Google on loading profile information.")
+			raise Exception("OAuth Failed: Invalid response from LinkedIn on loading profile information.")
 		
 		profile = { }
 		xml = minidom.parseString(content)
@@ -184,7 +184,7 @@ except:
 class UserCancelledAuthentication(Exception):
 	pass
 
-def openid2_get_redirect(request, provider, callback, scope):
+def openid2_get_redirect(request, provider, callback, scope, mode):
 	xrds = urllib.urlopen(providers[provider]["xrds"])
 	if xrds.getcode() != 200:
 		raise Exception("OpenID Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a XRDS information: " + xrds.read())
@@ -204,6 +204,9 @@ def openid2_get_redirect(request, provider, callback, scope):
 		for ext, d in providers[provider]["extensions"].iteritems():
 			for k, v in d.iteritems():
 				auth.addExtensionArg(ext, k, v) 
+				
+	if mode == "compact": # works with Google
+		auth.addExtensionArg("http://specs.openid.net/extensions/ui/1.0", "mode", "popup")
 	
 	return auth.redirectURL(realm=SITE_ROOT_URL, return_to=callback)
 
@@ -238,7 +241,7 @@ def create_oauth1_client(provider, access_token, verifier = None):
 # The next two functions are based on:
 # http://github.com/simplegeo/python-oauth2#readme
 
-def oauth1_get_redirect(request, provider, callback, scope):
+def oauth1_get_redirect(request, provider, callback, scope, mode):
 	"""Gets the URL for the redirect that begins the OAuth 1 authentication process."""
 	consumer = oauth.Consumer(providers[provider]["oauth_token"], providers[provider]["oauth_token_secret"])
 	client = oauth.Client(consumer)
@@ -289,7 +292,7 @@ def oauth1_finish_authentication(request, provider, original_callback):
 
 # The next two functions are based on Facebook's documentation.
 
-def oauth2_get_redirect(request, provider, callback, scope):
+def oauth2_get_redirect(request, provider, callback, scope, mode):
 	"""Gets the URL for the redirect that begins the OAuth 2 authentication process."""
 	
 	body = {
@@ -303,6 +306,9 @@ def oauth2_get_redirect(request, provider, callback, scope):
 				body["scope"] += "," + scope
 			else:
 				body["scope"] = scope
+	
+	if mode == "compact":
+		body["display"] = "touch" # works in Facebook
 	
 	url = providers[provider]["authenticate_url"] + "?" + urllib.urlencode(body)
 	return url

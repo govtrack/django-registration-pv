@@ -1,6 +1,5 @@
 {% load registration_providers %}
 
-<h2>Single Sign-On</h2>
 {% if user.singlesignon.all %}
 	<p>You have connected your account to these other sites:</p>
 	{% for auth in user.singlesignon.all %}
@@ -20,11 +19,13 @@
 <div style="clear: both;">
 {% for provider in ""|all_providers %}
 	<div style="float: left; text-align: center; margin-right: 1.5em">
-		<a href="{% url registration.views.external_start "associate" provider %}" onclick="document.location = '{% url registration.views.external_start "associate" provider %}?next=' + document.location; return false;">
+		<a href="{% url registration.views.external_start "associate" provider %}?next={% url popvox.views.profile.account_profile %}">
 			<div><img src="{{ provider|provider_logo:32 }}"/></div>
 			<div>{{ provider|provider_name }}</div>
 		</a>
 	</div>
 {% endfor %}
+<div style="clear: both"> </div>
 </div>
+
 
