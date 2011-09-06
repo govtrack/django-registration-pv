@@ -9,12 +9,12 @@ from django.contrib import messages
 
 import urlparse
 
-from jquery.ajax import json_response, validation_error_message
 from emailverification.utils import send_email_verification
 
 import providers
 from models import *
 from helpers import validate_username, validate_password, validate_email, captcha_html, validate_captcha
+from helpers import json_response, validation_error_message
 
 from settings import SITE_ROOT_URL, LOGIN_REDIRECT_URL, APP_NICE_SHORT_NAME
 

@@ -2,8 +2,13 @@ from django import forms
 from django.contrib.auth.models import User
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.http import HttpResponse, HttpResponseServerError
+from django.utils import simplejson
+from django import forms
 
 import recaptcha.client.captcha
+
+import sys
 
 # due to changes on April 21, 2011, we must use a different api server
 if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
@@ -12,11 +17,11 @@ if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
 	recaptcha.client.captcha.API_SERVER="http://www.google.com/recaptcha/api"
 	recaptcha.client.captcha.VERIFY_SERVER="www.google.com/recaptcha/api"
 
-from jquery.ajax import validation_error_message
 from emailverification.utils import send_email_verification
 
 from settings import RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY
 from settings import APP_NICE_SHORT_NAME
+from settings import DEBUG
 
 def captcha_html(error = None):
 	return recaptcha.client.captcha.displayhtml(RECAPTCHA_PUBLIC_KEY, error = error, use_ssl=True)
@@ -114,3 +119,41 @@ def change_email_address(user, newaddress):
 	axn.newemail = newaddress
 	send_email_verification(newaddress, None, axn)
 
+def validation_error_message(validationerror):
+	# Turns a ValidationException or a ValueError, KeyError into a string.
+	if not hasattr(validationerror, "messages"):
+		return unicode(validationerror)
+
+	from django.utils.encoding import force_unicode
+	#m = e.messages.as_text()
+	m = u'; '.join([force_unicode(g) for g in validationerror.messages])
+	if m.strip() == "":
+		m = "Invalid value."
+	return m
+	
+def json_response(f):
+	"""Turns dict output into a JSON response."""
+	def g(*args, **kwargs):
+		try:
+			ret = f(*args, **kwargs)
+			if isinstance(ret, HttpResponse):
+				return ret
+			resp = HttpResponse(simplejson.dumps(ret), mimetype="application/json")
+			return resp
+		except ValueError, e:
+			sys.stderr.write(unicode(e) + "\n")
+			return HttpResponse(simplejson.dumps({ "status": "fail", "msg": unicode(e) }), mimetype="application/json")
+		except forms.ValidationError, e :
+			m = validation_error_message(e)
+			sys.stderr.write(unicode(m) + "\n")
+			return HttpResponse(simplejson.dumps({ "status": "fail", "msg": m, "field": getattr(e, "source_field", None) }), mimetype="application/json")
+		except Exception, e:
+			if DEBUG:
+				import traceback
+				traceback.print_exc()
+			else:
+				sys.stderr.write(unicode(e) + "\n")
+				raise
+			return HttpResponseServerError(simplejson.dumps({ "status": "generic-failure", "msg": unicode(e) }), mimetype="application/json")
+	return g
+	
