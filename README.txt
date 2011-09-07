@@ -10,6 +10,11 @@ The email verification routine can be used as an independent app that provides
 an infrastructure for executing callback routines when a user follows a custom
 link sent to them in an email. See emailverification/README.txt for details.
 
+Dependencies
+------------
+
+python-openid (Ubuntu package)
+
 Configuration
 -------------
 

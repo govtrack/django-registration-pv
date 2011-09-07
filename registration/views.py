@@ -277,28 +277,33 @@ def external_finish(request):
 	# Recover session info.
 	(provider, auth_token, profile, uid, next) = request.session["registration_credentials"]
 	
-	if not "username" in request.POST:
+	if "username" in request.POST:
+		username = request.POST["username"]
+	else:
+		# experimental support for not requiring the user to choose a username
 		username = ""
 		if "screen_name" in profile:
 			username = profile["screen_name"]
 		elif "email" in profile and "@" in profile["email"]:
 			username = profile["email"][0:profile["email"].index("@")]
-		
-		# Show the form where the user can choose a username and email address.
-		return render_to_response('registration/oauth_create_account.html',
-			{
-				"provider": provider,
-				"username": username,
-				"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
-			},
-			context_instance=RequestContext(request))
+		elif "email" in request.POST and "@" in request.POST["email"]:
+			username = request.POST["email"][0:request.POST["email"].index("@")]
+		else:
+			# Show the form where the user can choose a username and email address.
+			return render_to_response('registration/oauth_create_account.html',
+				{
+					"provider": provider,
+					"username": username,
+					"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
+				},
+				context_instance=RequestContext(request))
 		
 	# Validation
 		
 	error = ""
 		
 	try:
-		username = validate_username(request.POST["username"])
+		username = validate_username(username)
 	except Exception, e:
 		error += validation_error_message(e) + " "
 		
@@ -313,7 +318,7 @@ def external_finish(request):
 		return render_to_response('registration/oauth_create_account.html',
 			{
 				"provider": provider,
-				"username": request.POST["username"],
+				"username": username,
 				"email": request.POST["email"],
 				"error": error
 			},
