@@ -16,7 +16,7 @@ from models import *
 from helpers import validate_username, validate_password, validate_email, captcha_html, validate_captcha
 from helpers import json_response, validation_error_message
 
-from settings import SITE_ROOT_URL, LOGIN_REDIRECT_URL, APP_NICE_SHORT_NAME
+from settings import SITE_ROOT_URL, LOGIN_REDIRECT_URL, APP_NICE_SHORT_NAME, REGISTRATION_ASK_USERNAME
 
 def loginform(request):
 	errors = ""
@@ -281,8 +281,9 @@ def external_finish(request):
 		username = request.POST["username"]
 	else:
 		# experimental support for not requiring the user to choose a username
-		username = ""
-		if "screen_name" in profile:
+		if REGISTRATION_ASK_USERNAME:
+			username = ""
+		elif "screen_name" in profile:
 			username = profile["screen_name"]
 		elif "email" in profile and "@" in profile["email"]:
 			username = profile["email"][0:profile["email"].index("@")]
@@ -293,22 +294,40 @@ def external_finish(request):
 			return render_to_response('registration/oauth_create_account.html',
 				{
 					"provider": provider,
-					"username": username,
 					"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
 				},
 				context_instance=RequestContext(request))
-		
+
+	if "email" in request.POST:
+		email = request.POST["email"]
+	else:
+		# experimental support for not requiring the user to choose a username
+		if "email" in profile and len(profile["email"]) <= 64 and "trust_email" in providers.providers[provider] and providers.providers[provider]["trust_email"]:
+			email = profile["email"]
+		else:
+			# Show the form where the user can choose a username and email address.
+			return render_to_response('registration/oauth_create_account.html',
+				{
+					"provider": provider,
+					"username": username,
+					"ask_username": REGISTRATION_ASK_USERNAME,
+					"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
+				},
+				context_instance=RequestContext(request))
+
 	# Validation
 		
 	error = ""
 		
+	ask_username = REGISTRATION_ASK_USERNAME
 	try:
 		username = validate_username(username)
 	except Exception, e:
+		ask_username = True
 		error += validation_error_message(e) + " "
 		
 	try:
-		email = validate_email(request.POST["email"])
+		email = validate_email(email)
 	except Exception, e:
 		error += validation_error_message(e) + " "
 	
@@ -319,7 +338,9 @@ def external_finish(request):
 			{
 				"provider": provider,
 				"username": username,
-				"email": request.POST["email"],
+				"ask_username": ask_username,
+				"email": email,
+				"ask_email": True,
 				"error": error
 			},
 			context_instance=RequestContext(request))

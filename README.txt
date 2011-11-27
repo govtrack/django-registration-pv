@@ -22,8 +22,15 @@ Make the icons directory accessible as /media/icons/sm (i.e. social media).
 
 In settings.py, add 'emailverification' and 'registration' to your INSTALLED_APPS.
 
+Then set:
+
     APP_NICE_SHORT_NAME = "MySite" # a short name for your site
     SERVER_EMAIL = "MySite <noreply@example.org>" # From: address on verification emails
+    REGISTRATION_ASK_USERNAME = True
+    
+If REGISTRATION_ASK_USERNAME is True, then the user is always asked for
+a username. If False, a username is guessed when enough information is
+provided by the login provider.
 		
 Optionally set:
 

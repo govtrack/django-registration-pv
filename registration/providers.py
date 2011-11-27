@@ -35,9 +35,9 @@ providers["google_openid"] = \
 		"trust_email": True,
 		"profile_uid": lambda profile : profile["id"],
 		"logo_urls": [
-			(16, "/media/icons/sm/google16.png"),
-			(32, "/media/icons/sm/google32.png"),
-			(48, "/media/icons/sm/google48.png"),
+			(16, "icons/sm/google16.png"),
+			(32, "icons/sm/google32.png"),
+			(48, "icons/sm/google48.png"),
 			],
 		"sort_order": 0,
 	}
@@ -62,9 +62,9 @@ try:
 			"load_profile": twitter_get_profile,
 			"profile_uid": lambda profile : profile["id"],
 			"logo_urls": [
-				(16, "/media/icons/sm/twitter16.png"),
-				(32, "/media/icons/sm/twitter32.png"),
-				(48, "/media/icons/sm/twitter48.png"),
+				(16, "icons/sm/twitter16.png"),
+				(32, "icons/sm/twitter32.png"),
+				(48, "icons/sm/twitter48.png"),
 				],
 			"sort_order": 50,
 		}
@@ -100,9 +100,9 @@ try:
 			"load_profile": google_get_profile,
 			"profile_uid": lambda profile : profile["email"],
 			"logo_urls": [
-				(16, "/media/icons/sm/google16.png"),
-				(32, "/media/icons/sm/google32.png"),
-				(48, "/media/icons/sm/google48.png"),
+				(16, "icons/sm/google16.png"),
+				(32, "icons/sm/google32.png"),
+				(48, "icons/sm/google48.png"),
 				],
 			"sort_order": 10,
 			"login": False
@@ -136,9 +136,9 @@ try:
 			"load_profile": linkedin_get_profile,
 			"profile_uid": lambda profile : profile["id"],
 			"logo_urls": [
-				(16, "/media/icons/sm/linkedin16.png"),
-				(32, "/media/icons/sm/linkedin32.png"),
-				(48, "/media/icons/sm/linkedin48.png"),
+				(16, "icons/sm/linkedin16.png"),
+				(32, "icons/sm/linkedin32.png"),
+				(48, "icons/sm/linkedin48.png"),
 				],
 			"sort_order": 100,
 		}
@@ -168,9 +168,9 @@ try:
 			"load_profile": facebook_get_profile,
 			"profile_uid": lambda profile : profile["id"],
 			"logo_urls": [
-				(16, "/media/icons/sm/facebook16.png"),
-				(32, "/media/icons/sm/facebook32.png"),
-				(48, "/media/icons/sm/facebook48.png"),
+				(16, "icons/sm/facebook16.png"),
+				(32, "icons/sm/facebook32.png"),
+				(48, "icons/sm/facebook48.png"),
 				],
 			"sort_order": 25,
 		}
