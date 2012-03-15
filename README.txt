@@ -41,13 +41,14 @@ Add records to your URLConf like this (you can use any base path):
 
     (r'^emailverif/', include('emailverification.urls')),
     (r'^registration/', include('registration.urls')),
+    
+The registratin app provides a new user registration page at /registration/signup.
 
 You will probably also want to use:
 
     (r'^accounts/login$', 'registration.views.loginform'),
-    (r'^accounts/logout$', 'django.contrib.auth.views.logout'),
-    (r'^accounts/profile/change_password$', 'django.contrib.auth.views.password_change'),
-    (r'^accounts/profile/password_changed$', 'django.contrib.auth.views.password_change_done'),
+    (r'^accounts/logout$', 'django.contrib.auth.views.logout', { "redirect_field_name": "next" }),
+    (r'^accounts/profile$', 'registration.views.profile'),
 
 You will probably want to override the templates in
 

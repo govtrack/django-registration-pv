@@ -6,5 +6,6 @@ urlpatterns = patterns('',
     (r'^ext/finish$', 'registration.views.external_finish'),
     (r'^reset-password$', 'registration.views.resetpassword'),
     (r'^ajax/login$', 'registration.views.ajax_login'),
+    (r'^signup$', 'registration.views.new_user'),
 )
 

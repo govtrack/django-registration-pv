@@ -6,8 +6,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.backends import ModelBackend
 from django.template import RequestContext
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
-import urlparse
+import urlparse, random
 
 from emailverification.utils import send_email_verification
 
@@ -276,104 +277,120 @@ def external_finish(request):
 	
 	# Recover session info.
 	(provider, auth_token, profile, uid, next) = request.session["registration_credentials"]
-	
-	if "username" in request.POST:
-		username = request.POST["username"]
-	else:
-		# experimental support for not requiring the user to choose a username
-		if REGISTRATION_ASK_USERNAME:
-			username = ""
-		elif "screen_name" in profile:
-			username = profile["screen_name"]
-		elif "email" in profile and "@" in profile["email"]:
-			username = profile["email"][0:profile["email"].index("@")]
-		elif "email" in request.POST and "@" in request.POST["email"]:
-			username = request.POST["email"][0:request.POST["email"].index("@")]
-		else:
-			# Show the form where the user can choose a username and email address.
-			return render_to_response('registration/oauth_create_account.html',
-				{
-					"provider": provider,
-					"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
-				},
-				context_instance=RequestContext(request))
 
-	if "email" in request.POST:
-		email = request.POST["email"]
-	else:
-		# experimental support for not requiring the user to choose a username
-		if "email" in profile and len(profile["email"]) <= 64 and "trust_email" in providers.providers[provider] and providers.providers[provider]["trust_email"]:
-			email = profile["email"]
-		else:
-			# Show the form where the user can choose a username and email address.
-			return render_to_response('registration/oauth_create_account.html',
-				{
-					"provider": provider,
-					"username": username,
-					"ask_username": REGISTRATION_ASK_USERNAME,
-					"email": profile["email"] if "email" in profile and len(profile["email"]) <= 64 else "", # longer addresses might be proxy addresses provided by the service that the user isn't aware of and run the risk of getting truncated
-				},
-				context_instance=RequestContext(request))
-
-	# Validation
-		
-	error = ""
-		
-	ask_username = REGISTRATION_ASK_USERNAME
-	try:
-		username = validate_username(username)
-	except Exception, e:
-		ask_username = True
-		error += validation_error_message(e) + " "
-		
-	try:
-		email = validate_email(email)
-	except Exception, e:
-		error += validation_error_message(e) + " "
-	
-	if error != "":
-		# Show the form again with the last entered field values and the
-		# validation error message.
-		return render_to_response('registration/oauth_create_account.html',
-			{
-				"provider": provider,
-				"username": username,
-				"ask_username": ask_username,
-				"email": email,
-				"ask_email": True,
-				"error": error
-			},
-			context_instance=RequestContext(request))
-	
-	# Beign creating the account.
-	
+	# Set information for later.
 	axn = RegisterUserAction()
-	axn.username = username
-	axn.email = email
 	axn.provider = provider
 	axn.uid = uid
 	axn.auth_token = auth_token
 	axn.profile = profile
 	axn.next = next
 	
+	return registration_utility(request, provider, profile, axn)
+	
+def new_user(request):
+	axn = RegisterUserAction()
+	axn.next = request.POST.get("next", "/accounts/profile")
+	return registration_utility(request, None, {}, axn)
+		
+def registration_utility(request, provider, profile, axn):
+	username = None
+	if "username" in request.POST:
+		username = request.POST["username"]
+	else:
+		# Guess a username.
+		if "screen_name" in profile:
+			username = profile["screen_name"]
+		elif "email" in profile and "@" in profile["email"]:
+			username = profile["email"][0:profile["email"].index("@")]
+		elif "email" in request.POST and "@" in request.POST["email"]:
+			username = request.POST["email"][0:request.POST["email"].index("@")]
+
+	email = None
+	if "email" in request.POST:
+		email = request.POST["email"]
+	elif "email" in profile and len(profile["email"]) <= 64:
+		# Pre-populate an email address.
+		email = profile["email"]
+
+	# Validation
+		
+	errors = { }
+	
+	if username:
+		try:
+			username = validate_username(username)
+		except Exception, e:
+			if REGISTRATION_ASK_USERNAME:
+				errors["username"] = validation_error_message(e)
+			else:
+				# make up a username that validates (i.e. not already taken)
+				c = User.objects.count() + 100
+				while True:
+					try:
+						username = validate_username("Anonymous" + str(random.randint(c, c*5)))
+						break
+					except:
+						continue
+	elif request.method == "POST" and REGISTRATION_ASK_USERNAME:
+		errors["username"] = "Provide a user name."
+	
+	if email:
+		try:
+			email = validate_email(email)
+		except Exception, e:
+			errors["email"] = validation_error_message(e)
+	elif request.method == "POST":
+		errors["email"] = "Provide an email address."
+
+	password = None
+	if not provider:
+		if request.method == "POST":
+			try:
+				password = validate_password(request.POST.get("password", ""))
+			except Exception, e:
+				errors["password"] = validation_error_message(e)
+
+	if len(errors) > 0 or request.method != "POST":
+		# Show the form again with the last entered field values and the
+		# validation error message.
+		return render_to_response('registration/register.html',
+			{
+				"provider": provider,
+				"username": username,
+				"ask_username": REGISTRATION_ASK_USERNAME,
+				"email": email,
+				"errors": errors,
+				"site_name": APP_NICE_SHORT_NAME,
+			},
+			context_instance=RequestContext(request))
+	
+	# Beign creating the account.
+	
+	axn.username = username
+	axn.email = email
+	axn.password = password
+	
 	# If we trust the email address --- because we trust the provider --- we can
 	# create the account immediately.
-	if "trust_email" in providers.providers[provider] and providers.providers[provider]["trust_email"] and "email" in profile and email == profile["email"]:
+	if provider and "trust_email" in providers.providers[provider] and providers.providers[provider]["trust_email"] and "email" in profile and email == profile["email"]:
 		return axn.finish(request)
 		
 	# Check that the email address is valid by sending an email and delaying registration.
 
-	request.goal = { "goal": "oauth-register-emailcheck" }
+	request.goal = { "goal": "register-emailcheck" }
 	
 	send_email_verification(email, None, axn)
 	
-	return render_to_response('registration/registration_check_inbox.html',
-		{ "email": email },
-		context_instance=RequestContext(request))
+	return render_to_response('registration/registration_check_inbox.html', {
+		"email": email,
+		"site_name": APP_NICE_SHORT_NAME,
+		}, context_instance=RequestContext(request))
 
 class RegisterUserAction:
 	username = None
 	email = None
+	password = None
 	provider = None
 	uid = None
 	auth_token = None
@@ -398,21 +415,26 @@ class RegisterUserAction:
 			pass
 		
 		user = User.objects.create(username=self.username, email=self.email)
-		user.set_unusable_password()
+		if not self.password:
+			user.set_unusable_password()
+		else:
+			user.set_password(self.password)
 		user.save()
 				
 		user = authenticate(user_object = user)
 		login(request, user)
 	
-		rec = AuthRecord()
-		rec.provider = self.provider
-		rec.uid = self.uid
-		rec.user = user
-		rec.auth_token = self.auth_token
-		rec.profile = self.profile
-		rec.save()		
-		
-		request.goal = { "goal": "oauth-register" }
+		if self.provider:
+			rec = AuthRecord()
+			rec.provider = self.provider
+			rec.uid = self.uid
+			rec.user = user
+			rec.auth_token = self.auth_token
+			rec.profile = self.profile
+			rec.save()		
+			request.goal = { "goal": "register-oauth" }
+		else:
+			request.goal = { "goal": "register-simple" }
 		
 		return HttpResponseRedirect(self.next)
 		
@@ -479,6 +501,7 @@ class ResetPasswordAction:
 		
 		return render_to_response('registration/reset_password_done.html', {
 			"newpassword": newpw,
+			"site_name": APP_NICE_SHORT_NAME,
 			},
 			context_instance=RequestContext(request))
 		
@@ -502,7 +525,7 @@ All the best,
 
 def resetpassword(request):
 	status = ""
-	if "email" in request.POST:
+	if request.POST.get("email").strip() != "":
 		try:
 			validate_captcha(request)
 			
@@ -525,7 +548,90 @@ def resetpassword(request):
 	return render_to_response('registration/reset_password.html', {
 		"status": status,
 		"captcha": captcha_html(),
+		"site_name": APP_NICE_SHORT_NAME,
 		},
 		context_instance=RequestContext(request))
 
+@login_required
+def profile(request):
+	errors = { }
+	
+	if request.method == "POST":
+		email = None
+		if request.POST.get("email", "").strip() != request.user.email:
+			try:
+				email = validate_email(request.POST.get("email", ""))
+			except Exception, e:
+				errors["email"] = validation_error_message(e)
+	
+		password = None
+		if request.POST.get("password", "").strip() != "":
+			try:
+				password = validate_password(request.POST.get("password", ""))
+			except Exception, e:
+				errors["email"] = validation_error_message(e)
 
+		username = None
+		if REGISTRATION_ASK_USERNAME:
+			try:
+				username = validate_username(request.POST.get("username", ""))
+			except Exception, e:
+				errors["username"] = validation_error_message(e)
+
+		if len(errors) == 0:
+			if username or password:
+				u = request.user
+				if password: u.set_password(password)
+				if username: u.username = username
+				u.save()
+				
+			if email:
+				axn = ChangeEmailAction()
+				axn.userid = request.user.id
+				axn.email = email
+				send_email_verification(email, None, axn)
+
+				return render_to_response('registration/registration_check_inbox.html', {
+					"email": email,
+					"site_name": APP_NICE_SHORT_NAME,
+					}, context_instance=RequestContext(request))
+
+	return render_to_response('registration/profile.html', {
+		"site_name": APP_NICE_SHORT_NAME,
+		"ask_username": REGISTRATION_ASK_USERNAME,
+		"sso": request.user.singlesignon.all(),
+		"errors": errors,
+		},
+		context_instance=RequestContext(request))
+
+class ChangeEmailAction:
+	userid = None
+	email = None
+	def get_response(self, request, vrec):
+		user = User.objects.get(id = self.userid)
+		
+		user.email = self.email
+		user.save()
+		
+		user = authenticate(user_object = user)
+		login(request, user)
+		
+		return HttpResponseRedirect("/accounts/profile")
+		
+	def email_subject(self):
+		return APP_NICE_SHORT_NAME + ": Confirm Email Change"
+	def email_body(self):
+		return """Hello!
+
+You have requested to change your """ + APP_NICE_SHORT_NAME + """ account email address. To
+continue, please follow this link:
+
+<URL>
+
+If it was not you who requested the change for this email address,
+just ignore this email.
+
+All the best,
+
+""" + APP_NICE_SHORT_NAME + """
+"""
