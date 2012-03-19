@@ -525,7 +525,7 @@ All the best,
 
 def resetpassword(request):
 	status = ""
-	if request.POST.get("email").strip() != "":
+	if request.POST.get("email", "").strip() != "":
 		try:
 			validate_captcha(request)
 			
