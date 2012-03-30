@@ -107,6 +107,9 @@ def validate_next(request, next):
 	func, args, kwargs = resolve(next) # validate that it's on our site. raises a Http404, though maybe wrapping it in a 403 would be better
 	
 def external_start(request, login_associate, provider):
+	if 'googlebot(at)googlebot.com' in request.META.get('HTTP_FROM', ''):
+		return HttpResponseNotFound()
+	
 	if not provider in providers.providers:
 		return HttpResponseNotFound()
 
