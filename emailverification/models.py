@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 
 import settings
 
@@ -56,3 +57,19 @@ class Record(models.Model):
 		return getattr(settings, 'SITE_ROOT_URL', "http://%s" % Site.objects.get_current().domain) \
 			+ reverse("emailverification.views.killcode", args=[self.code])
 
+class Ping(models.Model):
+	"""A record to verify that an email address is still valid using a pingback."""
+
+	def make_key():
+		import os, string
+		return "".join( string.letters[ord(b) % len(string.letters)] for b in os.urandom(12) )
+
+	user = models.ForeignKey(User, unique=True, db_index=True)
+	key = models.CharField(max_length=12, db_index=True, unique=True, default=make_key)
+	pingtime = models.DateTimeField(blank=True, null=True)
+	
+	@staticmethod
+	def get_ping_url(user):
+		ping, isnew = Ping.objects.get_or_create(user=user)
+		return settings.SITE_ROOT_URL + reverse("emailverification.views.emailping", args=[ping.key])
+	
