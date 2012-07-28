@@ -138,7 +138,9 @@ def json_response(f):
 			ret = f(*args, **kwargs)
 			if isinstance(ret, HttpResponse):
 				return ret
-			resp = HttpResponse(simplejson.dumps(ret), mimetype="application/json")
+			ret = simplejson.dumps(ret)
+			resp = HttpResponse(ret, mimetype="application/json")
+			resp["Content-Length"] = len(ret)
 			return resp
 		except ValueError, e:
 			sys.stderr.write(unicode(e) + "\n")
