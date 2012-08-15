@@ -39,7 +39,7 @@ providers["google_openid"] = \
 			(32, "icons/sm/google32.png"),
 			(48, "icons/sm/google48.png"),
 			],
-		"sort_order": 0,
+		"sort_order": 30,
 	}
 
 try:
@@ -104,7 +104,7 @@ try:
 				(32, "icons/sm/google32.png"),
 				(48, "icons/sm/google48.png"),
 				],
-			"sort_order": 10,
+			"sort_order": 60,
 			"login": False
 		}
 except:
@@ -172,7 +172,7 @@ try:
 				(32, "icons/sm/facebook32.png"),
 				(48, "icons/sm/facebook48.png"),
 				],
-			"sort_order": 25,
+			"sort_order": 0,
 		}
 except:
 	# silently fail if any of the settings aren't set
