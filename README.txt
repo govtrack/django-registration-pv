@@ -10,6 +10,8 @@ The email verification routine can be used as an independent app that provides
 an infrastructure for executing callback routines when a user follows a custom
 link sent to them in an email. See emailverification/README.txt for details.
 
+Utilities are also provided to manage bounced mail.
+
 Dependencies
 ------------
 
@@ -123,6 +125,49 @@ Facebook login with OAuth 2:
 	FACEBOOK_APP_ID = "..."
 	FACEBOOK_APP_SECRET = "..."
 	FACEBOOK_AUTH_SCOPE = "email" # can be an empty string
+	
+Bounced Mail Utility
+====================
+
+The emailverification app also contains a utility to check an IMAP mailbox for bounced
+mail from your site's outgoing mail to registered users.
+
+Send your outbound email with a return path to a special mailbox address that encodes
+the user ID the message was sent to. For instance, use:
+
+	from django.core.mail import EmailMessage
+	email = EmailMessage(emailsubject, body, "bounces+uid=USER_ID@example.com",
+		"user1234@gmail.com", headers = { 'From': "Example Website <feedback@example.com>" })
+
+to specify a return path encoding the recipiens user's id separate from the From: field
+on the message. Most mail servers ignore the part of an address starting with a plus
+sign, so you can create an infinite number of virtual addresses. If you use a different
+address for each user, you can reliably tell who you emailed in message delivery failure
+emails.
+
+Create an account to receive the mail (e.g. bounces@example.com) that you can access
+with IMAP. In settings.py, configure access to that inbox:
+
+	BOUNCES_IMAP_SSL = True
+	BOUNCES_IMAP_HOST = 'localhost'
+	BOUNCES_IMAP_USER = 'bounces'
+	BOUNCES_IMAP_PASSWORD = '...'
+
+And also configure a regular expression that picks out the user ID from the email address:
+	
+	BOUNCES_UID_REGEX = re.compile(r"bounces\+uid=(\d+)@example\.com")
+	
+Then run:
+
+	./manage.py catch_bounces
+	
+Which will create an emailverification.BouncedEmail record for each user that a bounced mail
+was received from, and it will increment a counter for each bounced message. And, it will
+delete the message from the IMAP server so that you don't count it again the next time you
+run the management command.
+
+It is up to you to do something with the BouncedEmail records.
+
 
 Copyright
 =========

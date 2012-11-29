@@ -72,4 +72,12 @@ class Ping(models.Model):
 	def get_ping_url(user):
 		ping, isnew = Ping.objects.get_or_create(user=user)
 		return settings.SITE_ROOT_URL + reverse("emailverification.views.emailping", args=[ping.key])
+
+class BouncedEmail(models.Model):
+	"""A record of a bounced email to a user."""
+
+	user = models.ForeignKey(User, unique=True, db_index=True)
+	firstbouncetime = models.DateTimeField(auto_now_add=True)
+	bounces = models.IntegerField(default=1)
 	
+
