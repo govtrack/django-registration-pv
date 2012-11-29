@@ -26,6 +26,7 @@ class Command(BaseCommand):
 		assert ret == "OK"
 		
 		# Scan all mail in the mailbox.
+		bounces_by_status = { }
 		typ, data = server.search(None, 'ALL')
 		for num in data[0].split():
 			# Load the message and parse it.
@@ -49,7 +50,16 @@ class Command(BaseCommand):
 				if not m: m = re.search(r"Status: (.*)", str(part)) # fall back to more generic code
 				if not m: continue
 				status = m.group(1)
-				if status not in ("5.0.0", "5.1.1"): continue # generic permanent error (often used for invalid mailbox), or mailbox not found
+				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
+				
+				# If the status is one of these, don't record the bounce.
+				# 5.1.1: Invalid mailbox.
+				# 5.1.6: Invalid mailbox.
+				# 5.2.1: Mailbox disabled.
+				# 5.4.4: DNS lookup failure (usually reported by our own MTA).
+				# 5.7.1: Relaying denied, but often says user unknown.
+				# 5.0.0: Generic permanent error often used for invalid mailbox.
+				if status not in ("5.0.0", "5.1.1", "5.1.6", "5.2.1", "5.4.4", "5.7.1"): continue
 				
 				# record the bounce
 				u = User.objects.get(id=uid)
@@ -68,3 +78,6 @@ class Command(BaseCommand):
 		server.close()
 		server.logout()
 		
+		print "Bounces by status code:"
+		for k, v in sorted(bounces_by_status.items(), key = lambda kv : kv[1], reverse=True):
+			print k, "\t", v
