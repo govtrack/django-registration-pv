@@ -125,6 +125,17 @@ Facebook login with OAuth 2:
 	FACEBOOK_APP_ID = "..."
 	FACEBOOK_APP_SECRET = "..."
 	FACEBOOK_AUTH_SCOPE = "email" # can be an empty string
+
+Management
+----------
+
+When users register with an email address, they are sent an email to
+confirm their address. The table that stores state for that should
+be cleared periodically (e.g. daily) with:
+
+  python manage.py clear_expired_email_verifications
+  
+
 	
 Bounced Mail Utility
 ====================
