@@ -46,20 +46,22 @@ class Command(BaseCommand):
 			# that warrants disabling email updates for the user.
 			for part in msg.walk():
 				if part.get_content_type() != 'message/delivery-status': continue
-				m = re.search(r"Diagnostic-Code: smtp; \d+ ([\d\.]+)", str(part))
+				m = re.search(r"Diagnostic-Code: smtp; ?\d+ ([\d\.]+|.*No such user.*|.*No such recipient.*)", str(part))
 				if not m: m = re.search(r"Status: (.*)", str(part)) # fall back to more generic code
 				if not m: continue
 				status = m.group(1)
 				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
 				
-				# If the status is one of these, don't record the bounce.
+				# If the status isn't one of these, don't record the bounce.
 				# 5.1.1: Invalid mailbox.
 				# 5.1.6: Invalid mailbox.
 				# 5.2.1: Mailbox disabled.
+				# 5.4.1: Access denied?
 				# 5.4.4: DNS lookup failure (usually reported by our own MTA).
 				# 5.7.1: Relaying denied, but often says user unknown.
-				# 5.0.0: Generic permanent error often used for invalid mailbox.
-				if status not in ("5.0.0", "5.1.1", "5.1.6", "5.2.1", "5.4.4", "5.7.1"): continue
+				# "...No such user..."
+				if status not in ("5.1.1", "5.1.6", "5.2.1", "5.4.1", "5.4.4", "5.7.1") \
+					and "No such user" not in status and "No such recipient" not in status: continue
 				
 				# record the bounce
 				u = User.objects.get(id=uid)
