@@ -400,8 +400,14 @@ class RegisterUserAction:
 	profile = None
 	next = None
 	
+	def __unicode__(self):
+		return "RegisterUser(%s,%s,%s)" % (self.username, self.email, (self.provider + ":" + str(self.uid)) if self.provider else "direct")
+	
 	def get_response(self, request, vrec):
 		return self.finish(request)
+		
+	def email_should_resend(self):
+		return not User.objects.filter(email=self.email).exists()
 		
 	def finish(self, request):
 		try:
@@ -453,8 +459,12 @@ All the best,
 
 """ + APP_NICE_SHORT_NAME + """
 
-(If you did not request an account, please ignore this email and
-sorry for the inconvenience.)"""
+---
+If you did not request an account, please ignore this email and
+sorry for the inconvenience. We'll send this email again in case
+you missed it the first time. If you do not want to get a reminder,
+please follow this link to stop future reminders:
+<KILL_URL>"""
 
 class DirectLoginBackend(ModelBackend):
 	"""
@@ -610,6 +620,13 @@ def profile(request):
 class ChangeEmailAction:
 	userid = None
 	email = None
+	
+	def __unicode__(self):
+		return "ChangeEmail(%d,%s)" % (self.userid, self.email)
+		
+	def email_should_resend(self):
+		return not User.objects.filter(email=self.email).exists()
+	
 	def get_response(self, request, vrec):
 		user = User.objects.get(id = self.userid)
 		
@@ -637,4 +654,10 @@ just ignore this email.
 All the best,
 
 """ + APP_NICE_SHORT_NAME + """
+
+
+---
+We'll send this email again in case you missed it the first time. If you do not want
+to get a reminder, please follow this link to stop future reminders:
+<KILL_URL>
 """
