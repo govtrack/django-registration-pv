@@ -4,7 +4,7 @@ import settings
 import oauth2 as oauth
 import urlparse
 import urllib
-import simplejson as json
+import json
 from xml.dom import minidom
 
 from settings import SITE_ROOT_URL
