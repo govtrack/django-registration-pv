@@ -184,6 +184,9 @@ except:
 class UserCancelledAuthentication(Exception):
 	pass
 
+from openid.store.filestore import FileOpenIDStore
+openid_store = FileOpenIDStore("/tmp/openid")
+
 def openid2_get_redirect(request, provider, callback, scope, mode):
 	xrds = urllib.urlopen(providers[provider]["xrds"])
 	if xrds.getcode() != 200:
@@ -192,11 +195,10 @@ def openid2_get_redirect(request, provider, callback, scope, mode):
 	
 	from openid.consumer.consumer import Consumer
 	from openid.consumer.discover import OpenIDServiceEndpoint
-	from openid.store.memstore import MemoryStore
 	
 	service =  OpenIDServiceEndpoint.fromXRDS(providers[provider]["xrds"], xrds)[0]
 	
-	consumer = Consumer(request.session, MemoryStore())
+	consumer = Consumer(request.session, openid_store)
 	
 	auth = consumer.beginWithoutDiscovery(service)
 	
@@ -212,9 +214,8 @@ def openid2_get_redirect(request, provider, callback, scope, mode):
 
 def openid2_finish_authentication(request, provider, original_callback):
 	from openid.consumer.consumer import Consumer, SUCCESS, FAILURE, CANCEL, SETUP_NEEDED
-	from openid.store.memstore import MemoryStore
 	
-	consumer = Consumer(request.session, MemoryStore())
+	consumer = Consumer(request.session, openid_store)
 	
 	ret = consumer.complete(request.REQUEST, original_callback)
 	if ret.status != SUCCESS:

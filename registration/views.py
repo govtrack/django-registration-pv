@@ -151,7 +151,8 @@ def external_return(request, login_associate, provider):
 		return HttpResponseRedirect(request.session["oauth_finish_next"] if "oauth_finish_next" in request.session else reverse(loginform))
 	except Exception, e:
 		# Error might indicate a protocol error or else the user denied the
-		# authorization.
+		# authorization. If finish_authentication returns None, a TypeError
+		# is raised in trying to assign it to the tuple above.
 		import sys
 		sys.stderr.write("oauth-fail: " + str(e) + "\n");
 		request.goal = { "goal": "oauth-fail" }
