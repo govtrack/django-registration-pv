@@ -25,7 +25,7 @@ form label {
 {% endif %}
 
 	
-<form method="post" style="margin-top: 1em;">
+<form method="post" style="margin-top: 1em; max-width: 320px;">
 	{% csrf_token %}
 	{% if request.GET.next %}<input type="hidden" name="next" value="{{request.GET.next}}"/>{% endif %}
 
