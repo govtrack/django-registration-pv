@@ -40,6 +40,7 @@ form label {
 		<label for="password">Change Password</label>
 		<input type="password" size="20" id="password" name="password" value=""/>
 	</div>
+	{% if errors.password %}<p class="error">{{errors.password}}</p>{% endif %}
 	{% if not user.has_usable_password %}
 		{% if sso|length == 0 %}
 			<p style="margin-top: 1em">Your account is missing a password. You should set one so you can log back in later!</p>
@@ -52,6 +53,7 @@ form label {
 		{% endif %}
 	{% endif %}
 	
+	{% if success %}<p class="error">{{success}}</p>{% endif %}
 
 	<input type="submit" class="submit" value="Continue" style="margin-top: 1em"/>
 </form>

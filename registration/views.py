@@ -569,6 +569,7 @@ def resetpassword(request):
 @login_required
 def profile(request):
 	errors = { }
+	success = []
 	
 	if request.method == "POST":
 		email = None
@@ -583,7 +584,7 @@ def profile(request):
 			try:
 				password = validate_password(request.POST.get("password", ""))
 			except Exception, e:
-				errors["email"] = validation_error_message(e)
+				errors["password"] = validation_error_message(e)
 
 		username = None
 		if REGISTRATION_ASK_USERNAME:
@@ -595,8 +596,12 @@ def profile(request):
 		if len(errors) == 0:
 			if username or password:
 				u = request.user
-				if password: u.set_password(password)
-				if username: u.username = username
+				if password:
+					u.set_password(password)
+					success.append("Your password was updated.")
+				if username:
+					u.username = username
+					success.append("Your user name was updated.")
 				u.save()
 				
 			if email:
@@ -615,6 +620,7 @@ def profile(request):
 		"ask_username": REGISTRATION_ASK_USERNAME,
 		"sso": request.user.singlesignon.all(),
 		"errors": errors,
+		"success": " ".join(success) if len(success) > 0 else None,
 		},
 		context_instance=RequestContext(request))
 
