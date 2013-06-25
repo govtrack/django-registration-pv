@@ -45,7 +45,7 @@ providers["google_openid"] = \
 try:
 	def twitter_get_profile(access_token):
 		client = create_oauth1_client("twitter", access_token)
-		resp, content = client.request("https://api.twitter.com/1/users/show.json?user_id=" + access_token['user_id'], "GET")
+		resp, content = client.request("https://api.twitter.com/1.1/users/show.json?user_id=" + access_token['user_id'], "GET")
 		if resp['status'] != '200':
 			raise Exception("OAuth Failed: Invalid response from Twitter on loading profile information.")
 		return json.loads(content)
