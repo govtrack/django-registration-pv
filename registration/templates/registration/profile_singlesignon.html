@@ -19,7 +19,7 @@
 <div style="clear: both;">
 {% for provider in ""|all_providers %}
 	<div style="float: left; text-align: center; margin-right: 1.5em">
-		<a href="{% url registration.views.external_start "associate" provider %}?next={% url registration.views.profile %}">
+		<a href="{% url "registration.views.external_start" "associate" provider %}?next={% url "registration.views.profile" %}">
 			<div><img src="{{MEDIA_URL}}{{ provider|provider_logo:32 }}"/></div>
 			<div>{{ provider|provider_name }}</div>
 		</a>

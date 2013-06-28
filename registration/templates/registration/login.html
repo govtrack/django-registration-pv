@@ -21,7 +21,7 @@
 	<input type="password" name="password" id="id_password" value="{{password}}" /><br /> 
 				
 	<input class="submit" type="submit" value="Login" />
-	<a class="forgot" href="{% url registration.views.resetpassword %}">Forgot your password?</a>
+	<a class="forgot" href="{% url "registration.views.resetpassword" %}">Forgot your password?</a>
 				
 	<input type="hidden" name="next" value="{{ next }}" />
 </form>
