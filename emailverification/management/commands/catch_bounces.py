@@ -33,22 +33,37 @@ class Command(BaseCommand):
 			typ, data = server.fetch(num, '(RFC822)')
 			msg = email.message_from_string(data[0][1])
 			
+			# Clean the mailbox of vacation auto-replies and the like.
+			if msg["X-Auto-Response-Suppress"] == "All" \
+				or msg["Subject"].startswith("Out of Office:"):
+				status = "vacation/autoreply"
+				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
+				server.store(num, '+FLAGS', r'\Deleted')
+			
 			# Only read multipart/report messages since we can parse errors out of them.
-			if msg.get_content_type() != 'multipart/report': continue
+			if msg.get_content_type() != 'multipart/report':
+				status = "not a bounce (invalid mime type)"
+				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
+				continue
 			
 			# Check that it is a bounce to an address that matches the EMAIL_UPDATES_RETURN_PATH
 			# setting, and get out of that the original delivery user ID.
-			m = settings.BOUNCES_UID_REGEX.match(msg['X-Original-To'])
-			if not m: continue
+			m = settings.BOUNCES_UID_REGEX.match(msg['To'])
+			if not m: m = settings.BOUNCES_UID_REGEX.match(msg['X-Original-To'])
+			if not m:
+				status = "not-a-recognized-bounce"
+				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
+				continue
 			uid = int(m.group(1))
 			
 			# Look for the parsable report section and check if this is a permanent failure
 			# that warrants disabling email updates for the user.
 			for part in msg.walk():
 				if part.get_content_type() != 'message/delivery-status': continue
-				m = re.search(r"Diagnostic-Code: smtp; ?\d+ ([\d\.]+|.*No such user.*|.*No such recipient.*)", str(part))
+				m = re.search(r"Diagnostic-Code: smtp; ?\d+ ([\d\.]+|.*No such user.*|.*No such recipient.*|Mailbox unavailable.*|Requested action not taken: mailbox unavailable.*|Invalid recipient)", str(part))
 				if not m: m = re.search(r"Status: (.*)", str(part)) # fall back to more generic code
-				if not m: continue
+				if not m: continue # very few get this far
+				
 				status = m.group(1)
 				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
 				
@@ -61,7 +76,9 @@ class Command(BaseCommand):
 				# 5.7.1: Relaying denied, but often says user unknown.
 				# "...No such user..."
 				if status not in ("5.1.1", "5.1.6", "5.2.1", "5.4.1", "5.4.4", "5.7.1") \
-					and "No such user" not in status and "No such recipient" not in status: continue
+					and "No such user" not in status and "No such recipient" not in status and "Mailbox unavailable" not in status \
+					and "Requested action not taken: mailbox unavailable" not in status\
+					and "Invalid recipient" not in status: continue
 				
 				# record the bounce
 				u = User.objects.get(id=uid)
@@ -75,6 +92,10 @@ class Command(BaseCommand):
 				
 				# only need to hit one message part per message
 				break
+			else:
+				status = "not a bounce (no delivery status)"
+				bounces_by_status[status] = bounces_by_status.get(status, 0) + 1
+			
 				
 		server.expunge()
 		server.close()
@@ -82,4 +103,4 @@ class Command(BaseCommand):
 		
 		print "Bounces by status code:"
 		for k, v in sorted(bounces_by_status.items(), key = lambda kv : kv[1], reverse=True):
-			print k, "\t", v
+			print v, "\t", k
