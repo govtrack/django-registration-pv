@@ -120,7 +120,7 @@ def external_start(request, login_associate, provider):
 		validate_next(request, request.GET["next"]) # raises exception on error
 		request.session["oauth_finish_next"] = request.GET["next"]
 		
-	if providers.providers[provider]["method"] =="openid2" or True:
+	if providers.providers[provider]["method"] =="openid2":
 		# the callback must match the realm, which is always SITE_ROOT_URL
 		callback = SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider])
 	else:
