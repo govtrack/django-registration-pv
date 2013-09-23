@@ -2,9 +2,8 @@
 import settings
 
 import oauth2 as oauth
-import urlparse
-import urllib
-import json
+import urlparse, urllib
+import json, base64
 from xml.dom import minidom
 
 from settings import SITE_ROOT_URL
@@ -15,8 +14,13 @@ from settings import SITE_ROOT_URL
 
 providers = { }
 
+try:
+	google_auth_mode = settings.GOOGLE_AUTH_MODE
+except:
+	google_auth_mode = "openid"
+
 providers["google_openid"] = \
-	{	"displayname": "Google",
+	{	"displayname": "Google" + (" OpenID" if google_auth_mode != "openid" else ""),
 		"method": "openid2",
 		"xrds": "https://www.google.com/accounts/o8/id",
 		"extensions": {
@@ -40,6 +44,7 @@ providers["google_openid"] = \
 			(48, "icons/sm/google48.png"),
 			],
 		"sort_order": 30,
+		"login": google_auth_mode == "openid",
 	}
 
 try:
@@ -88,7 +93,7 @@ try:
 		return profile
 		
 	providers["google_oauth"] = \
-		{	"displayname": "Google",
+		{	"displayname": "Google" + (" OAuth1" if google_auth_mode != "oauth1" else ""),
 			"method": "oauth1",
 			"request_token_url": "https://www.google.com/accounts/OAuthGetRequestToken",
 			"access_token_url": "https://www.google.com/accounts/OAuthGetAccessToken",
@@ -105,7 +110,44 @@ try:
 				(48, "icons/sm/google48.png"),
 				],
 			"sort_order": 60,
-			"login": False
+			"login": google_auth_mode == "oauth1"
+		}
+except:
+	# silently fail if any of the settings aren't set
+	pass
+
+try:
+	def google_get_profile2(access_token):
+		# Parse the id_token. Since we just got it over https, we will skip the
+		# crypto part.
+		b = access_token["id_token"].encode("ascii").split(".")[1] # JWT, which is three base64 encoded payloads separated by periods, and the middle payload is the main part
+		b += '=' * (-len(b) % 4) # add back missing padding
+		body = json.loads(base64.b64decode(b, '-_'))
+		if not body.get("email_verified", False): body["email"] = None
+		return body
+		
+	providers["google_oauth2"] = \
+		{	"displayname": "Google" + (" OAuth2" if google_auth_mode != "oauth2" else ""),
+			"method": "oauth2",
+			"authenticate_url": "https://accounts.google.com/o/oauth2/auth",
+			"access_token_url": "https://accounts.google.com/o/oauth2/token",
+			"access_token_method": "POST",
+			"additional_request_parameters": {
+				"response_type": "code",
+				"scope": settings.GOOGLE_AUTH_SCOPE,
+			},
+			"clientid": settings.GOOGLE_APP_ID,
+			"clientsecret": settings.GOOGLE_APP_SECRET,
+			"trust_email": True,
+			"load_profile": google_get_profile2,
+			"profile_uid": lambda profile : profile["sub"],
+			"logo_urls": [
+				(16, "icons/sm/google16.png"),
+				(32, "icons/sm/google32.png"),
+				(48, "icons/sm/google48.png"),
+				],
+			"sort_order": 31,
+			"login": google_auth_mode == "oauth2",
 		}
 except:
 	# silently fail if any of the settings aren't set
@@ -161,6 +203,7 @@ try:
 			"method": "oauth2",
 			"authenticate_url": "https://graph.facebook.com/oauth/authorize",
 			"access_token_url": "https://graph.facebook.com/oauth/access_token",
+			"access_token_method": "GET",
 			"additional_request_parameters": { "scope": settings.FACEBOOK_AUTH_SCOPE },
 			"clientid": settings.FACEBOOK_APP_ID,
 			"clientsecret": settings.FACEBOOK_APP_SECRET,
@@ -300,6 +343,18 @@ def oauth2_get_redirect(request, provider, callback, scope, mode):
 			"client_id": providers[provider]["clientid"],
 			"redirect_uri": callback,
 		}
+
+	# Google: Provide a login hint, which is the user's email address,
+	# so Google can pre-fill some information.
+	if "email" in request.GET:
+		body["login_hint"] = request.GET["email"]
+
+	# Google: When doing an association (rather than login), force the user
+	# to choose an account since it's possible they already have an account
+	# associated with the same provider.
+	elif request.user.is_authenticated():
+		body["prompt"] = "select_account"
+
 	if "additional_request_parameters" in providers[provider]:
 		body.update(providers[provider]["additional_request_parameters"])
 		if scope != None:
@@ -325,19 +380,32 @@ def oauth2_finish_authentication(request, provider, original_callback):
 		else:
 			raise Exception("OAuth2 Failed: "  + request.GET["error_reason"])
 	
-	url = providers[provider]["access_token_url"] + "?" + urllib.urlencode({
-			"client_id": providers[provider]["clientid"],
-			"redirect_uri": original_callback,
-			"client_secret": providers[provider]["clientsecret"],
-			"code": request.GET["code"]
-		})
-	
-	ret = urllib.urlopen(url)
+	qsargs = {
+		"client_id": providers[provider]["clientid"],
+		"redirect_uri": original_callback,
+		"client_secret": providers[provider]["clientsecret"],
+		"code": request.GET["code"],
+		"grant_type": "authorization_code",
+	}
+
+
+	if providers[provider]["access_token_method"] == "GET":
+		ret = urllib.urlopen(providers[provider]["access_token_url"] + "?" + urllib.urlencode(qsargs))
+	else:
+		ret = urllib.urlopen(providers[provider]["access_token_url"], urllib.urlencode(qsargs))
+
 	if ret.getcode() != 200:
 		raise Exception("OAuth2 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining an access token: " + ret.read())
+	mime_type = ret.info()["Content-Type"].split(";")[0].strip()
 	ret = ret.read()
 
-	access_token = dict(urlparse.parse_qsl(ret))
+	if mime_type == "application/json":
+		# Google
+		access_token = json.loads(ret)
+	else:
+		# Facebook
+		access_token = dict(urlparse.parse_qsl(ret))
+
 	profile = providers[provider]["load_profile"](access_token)
 	
 	return (provider, access_token, profile)
