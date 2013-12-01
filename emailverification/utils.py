@@ -6,7 +6,7 @@ from models import *
 
 from datetime import datetime, timedelta
 
-import settings
+from django.conf import settings
 
 def send_email_verification(email, searchkey, action, send_email=True):
 	r = Record()

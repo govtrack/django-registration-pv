@@ -6,32 +6,33 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.utils import simplejson
 from django import forms
 
-import recaptcha.client.captcha
-
 import sys
 
-# due to changes on April 21, 2011, we must use a different api server
-if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
-	# these won't work in newer recaptcha lib because it creates the full path differently
-	recaptcha.client.captcha.API_SSL_SERVER="https://www.google.com/recaptcha/api"
-	recaptcha.client.captcha.API_SERVER="http://www.google.com/recaptcha/api"
-	recaptcha.client.captcha.VERIFY_SERVER="www.google.com/recaptcha/api"
+try:
+	import recaptcha.client.captcha
+
+	# due to changes on April 21, 2011, we must use a different api server
+	if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
+		# these won't work in newer recaptcha lib because it creates the full path differently
+		recaptcha.client.captcha.API_SSL_SERVER="https://www.google.com/recaptcha/api"
+		recaptcha.client.captcha.API_SERVER="http://www.google.com/recaptcha/api"
+		recaptcha.client.captcha.VERIFY_SERVER="www.google.com/recaptcha/api"
+except ImportError:
+	pass
 
 from emailverification.utils import send_email_verification
 
-from settings import RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY
-from settings import APP_NICE_SHORT_NAME
-from settings import DEBUG
+from django.conf import settings
 
 def captcha_html(error = None):
-	return recaptcha.client.captcha.displayhtml(RECAPTCHA_PUBLIC_KEY, error = error, use_ssl=True)
+	return recaptcha.client.captcha.displayhtml(settings.RECAPTCHA_PUBLIC_KEY, error = error, use_ssl=True)
 
 def validate_captcha(request):
 	# This may have to be the last check in a form because if the captcha succeeds, the user
 	# cannot resubmit without a new captcha. (I hope. reCAPTCHA should not be open
 	# to replay-attacks.)
 	try:
-		cx = recaptcha.client.captcha.submit(request.POST["recaptcha_challenge_field"], request.POST["recaptcha_response_field"], RECAPTCHA_PRIVATE_KEY, request.META["REMOTE_ADDR"])
+		cx = recaptcha.client.captcha.submit(request.POST["recaptcha_challenge_field"], request.POST["recaptcha_response_field"], settings.RECAPTCHA_PRIVATE_KEY, request.META["REMOTE_ADDR"])
 	except Exception, e:
 		raise forms.ValidationError("There was an error processing the CAPTCHA.")
 	if not cx.is_valid:
@@ -96,16 +97,16 @@ class ChangeEmailAddressAction:
 	newemail = None
 	
 	def email_subject(self):
-		return APP_NICE_SHORT_NAME + ": Verify Your New Address"
+		return settings.APP_NICE_SHORT_NAME + ": Verify Your New Address"
 	def email_body(self):
-		return """To change your """ + APP_NICE_SHORT_NAME + """ account's email address to this address,
+		return """To change your """ + settings.APP_NICE_SHORT_NAME + """ account's email address to this address,
 please complete the verification by following this link:
 
 <URL>
 
 All the best,
 
-""" + APP_NICE_SHORT_NAME + """
+""" + settings.APP_NICE_SHORT_NAME + """
 """
 
 	def get_response(self, request, vrec):
@@ -150,7 +151,7 @@ def json_response(f):
 			sys.stderr.write(unicode(m) + "\n")
 			return HttpResponse(simplejson.dumps({ "status": "fail", "msg": m, "field": getattr(e, "source_field", None) }), mimetype="application/json")
 		except Exception, e:
-			if DEBUG:
+			if settings.DEBUG:
 				import traceback
 				traceback.print_exc()
 			else:

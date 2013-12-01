@@ -1,15 +1,17 @@
-<p>Sign in with your Google, Facebook, or Twitter account, your email address and password, <div>or <a href="/accounts/register{% if next %}?next={{next|urlencode}}{% endif %}">create an account</a>.</div></p>
+{% extends "registration/base.html" %}
+{% load registration_providers %}
+
+{% block title %}Log In{% endblock %}
+
+{% block body %}
+
+<h1>Log In</h1>
+
+<p>If you have an account, please log in. Otherwise <a href="{% url 'registration.views.new_user' %}{% if next %}?next={{next|urlencode}}{% endif %}">create an account</a>.</div></p>
 			
 <form method="post" class="login">
 	{% csrf_token %}
 
-	<div class="signin_social">
-		<h4>Sign in with:</h4>
-		{% with next as singlesignon_next %}
-			{% include "registration/login_singlesignon.html" %}
-		{% endwith %}
-	</div>
-		
 	{% if errors %}
 		<p class="error">{{errors}} Please try again.</p>
 	{% endif %}
@@ -25,3 +27,14 @@
 				
 	<input type="hidden" name="next" value="{{ next }}" />
 </form>
+
+{% if ""|new_account_providers %}
+<div class="signin_social">
+	<p>You can also log in or register using an account you have at {% for provider in ""|new_account_providers %}{{provider|provider_name}}{% if forloop.revcounter0 > 1 %}, {% endif %}{% if forloop.revcounter0 == 1 %} or {% endif %}{% endfor %}:</p>
+	{% with next as singlesignon_next %}
+		{% include "registration/login_singlesignon.html" %}
+	{% endwith %}
+</div>
+{% endif %}		
+
+{% endblock %}

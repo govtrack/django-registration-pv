@@ -17,7 +17,7 @@ from models import *
 from helpers import validate_username, validate_password, validate_email, captcha_html, validate_captcha
 from helpers import json_response, validation_error_message
 
-from settings import SITE_ROOT_URL, LOGIN_REDIRECT_URL, APP_NICE_SHORT_NAME, REGISTRATION_ASK_USERNAME
+from django.conf import settings
 
 def loginform(request):
 	errors = ""
@@ -48,7 +48,7 @@ def loginform(request):
 						except Exception, e:
 							#print e
 							pass # fall through
-					return HttpResponseRedirect(LOGIN_REDIRECT_URL)
+					return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
 				else:
 					errors = "Your account has been disabled!"
 			else:
@@ -60,6 +60,19 @@ def loginform(request):
 		"password": "" if not "password" in request.POST else request.POST["password"],
 		"next": "" if not "next" in request.REQUEST else request.REQUEST["next"],
 		},
+		context_instance=RequestContext(request))
+
+def logoutview(request):
+	if request.user.is_authenticated():
+		logout(request)
+
+	try:
+		validate_next(request, request.GET["next"]) # raises exception on error
+		return HttpResponseRedirect(request.GET["next"])
+	except Exception, e:
+		pass # fall through
+
+	return render_to_response('registration/loggedout.html', {},
 		context_instance=RequestContext(request))
 
 class EmailPasswordLoginBackend(ModelBackend):
@@ -91,7 +104,7 @@ def validate_next(request, next):
 	# our domain but to a page that will re-load the widget. Sooooo... we'll allow
 	# unrestricted next= if the referer is on our domain. (nb. <base target="_top"/>)
 	try:
-		if urlparse.urlparse(request.META.get("HTTP_REFERER", "http://www.example.org/")).hostname == urlparse.urlparse(SITE_ROOT_URL).hostname:
+		if urlparse.urlparse(request.META.get("HTTP_REFERER", "http://www.example.org/")).hostname == urlparse.urlparse(settings.SITE_ROOT_URL).hostname:
 			return
 	except: # invalid referrer header
 		pass
@@ -102,8 +115,8 @@ def validate_next(request, next):
 		next = next[0:next.index("#")]
 	if "?" in next: # chop off query string
 		next = next[0:next.index("?")]
-	if next[0:len(SITE_ROOT_URL)] == SITE_ROOT_URL:
-		next = next[len(SITE_ROOT_URL):]
+	if next[0:len(settings.SITE_ROOT_URL)] == settings.SITE_ROOT_URL:
+		next = next[len(settings.SITE_ROOT_URL):]
 	func, args, kwargs = resolve(next) # validate that it's on our site. raises a Http404, though maybe wrapping it in a 403 would be better
 	
 def external_start(request, login_associate, provider):
@@ -120,9 +133,9 @@ def external_start(request, login_associate, provider):
 		validate_next(request, request.GET["next"]) # raises exception on error
 		request.session["oauth_finish_next"] = request.GET["next"]
 		
-	if providers.providers[provider]["method"] =="openid2":
+	if providers.providers[provider]["method"] == "openid2":
 		# the callback must match the realm, which is always SITE_ROOT_URL
-		callback = SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider])
+		callback = settings.SITE_ROOT_URL + reverse(external_return, args=[login_associate, provider])
 	else:
 		# be nicer and build the callback URL from the HttpRequest, in case we are not
 		# hosting SITE_ROOT_URL (i.e. debugging).
@@ -162,7 +175,7 @@ def external_return(request, login_associate, provider):
 	uid = providers.providers[provider]["profile_uid"](profile)
 	
 	# be sure to get this before possibly logging the user out, which clears session state
-	next = LOGIN_REDIRECT_URL
+	next = settings.LOGIN_REDIRECT_URL
 	if "oauth_finish_next" in request.session:
 		next = request.session["oauth_finish_next"]
 	
@@ -275,7 +288,7 @@ def external_finish(request):
 	if not "registration_credentials" in request.session:
 		# User is coming back to this page later on for no good reason?
 		if request.user.is_authenticated():
-			return HttpResponseRedirect(LOGIN_REDIRECT_URL)
+			return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
 		else:
 			return HttpResponseRedirect("/")
 	
@@ -325,7 +338,7 @@ def registration_utility(request, provider, profile, axn):
 		try:
 			username = validate_username(username)
 		except Exception, e:
-			if REGISTRATION_ASK_USERNAME:
+			if settings.REGISTRATION_ASK_USERNAME:
 				errors["username"] = validation_error_message(e)
 			else:
 				# make up a username that validates (i.e. not already taken)
@@ -336,7 +349,7 @@ def registration_utility(request, provider, profile, axn):
 						break
 					except:
 						continue
-	elif request.method == "POST" and REGISTRATION_ASK_USERNAME:
+	elif request.method == "POST" and settings.REGISTRATION_ASK_USERNAME:
 		errors["username"] = "Provide a user name."
 	
 	if email:
@@ -362,10 +375,10 @@ def registration_utility(request, provider, profile, axn):
 			{
 				"provider": provider,
 				"username": username,
-				"ask_username": REGISTRATION_ASK_USERNAME,
+				"ask_username": settings.REGISTRATION_ASK_USERNAME,
 				"email": email,
 				"errors": errors,
-				"site_name": APP_NICE_SHORT_NAME,
+				"site_name": settings.APP_NICE_SHORT_NAME,
 			},
 			context_instance=RequestContext(request))
 	
@@ -388,7 +401,7 @@ def registration_utility(request, provider, profile, axn):
 	
 	return render_to_response('registration/registration_check_inbox.html', {
 		"email": email,
-		"site_name": APP_NICE_SHORT_NAME,
+		"site_name": settings.APP_NICE_SHORT_NAME,
 		}, context_instance=RequestContext(request))
 
 class RegisterUserAction:
@@ -449,16 +462,16 @@ class RegisterUserAction:
 		return HttpResponseRedirect(self.next)
 		
 	def email_subject(self):
-		return APP_NICE_SHORT_NAME + ": Finish Creating Your Account"
+		return settings.APP_NICE_SHORT_NAME + ": Finish Creating Your Account"
 	def email_body(self):
-		return """Thanks for coming to """ + APP_NICE_SHORT_NAME + """. To finish creating your account
+		return """Thanks for coming to """ + settings.APP_NICE_SHORT_NAME + """. To finish creating your account
 just follow this link:
 
 <URL>
 
 All the best,
 
-""" + APP_NICE_SHORT_NAME + """
+""" + settings.APP_NICE_SHORT_NAME + """
 
 ---
 If you did not request an account, please ignore this email and
@@ -515,16 +528,16 @@ class ResetPasswordAction:
 		
 		return render_to_response('registration/reset_password_done.html', {
 			"newpassword": newpw,
-			"site_name": APP_NICE_SHORT_NAME,
+			"site_name": settings.APP_NICE_SHORT_NAME,
 			},
 			context_instance=RequestContext(request))
 		
 	def email_subject(self):
-		return APP_NICE_SHORT_NAME + ": Reset Password"
+		return settings.APP_NICE_SHORT_NAME + ": Reset Password"
 	def email_body(self):
 		return """Hello!
 
-You have requested to reset your """ + APP_NICE_SHORT_NAME + """ account password. To
+You have requested to reset your """ + settings.APP_NICE_SHORT_NAME + """ account password. To
 continue, please follow this link:
 
 <URL>
@@ -534,7 +547,7 @@ just ignore this email.
 
 All the best,
 
-""" + APP_NICE_SHORT_NAME + """
+""" + settings.APP_NICE_SHORT_NAME + """
 """
 
 def resetpassword(request):
@@ -562,7 +575,7 @@ def resetpassword(request):
 	return render_to_response('registration/reset_password.html', {
 		"status": status,
 		"captcha": captcha_html(),
-		"site_name": APP_NICE_SHORT_NAME,
+		"site_name": settings.APP_NICE_SHORT_NAME,
 		},
 		context_instance=RequestContext(request))
 
@@ -587,11 +600,12 @@ def profile(request):
 				errors["password"] = validation_error_message(e)
 
 		username = None
-		if REGISTRATION_ASK_USERNAME:
-			try:
-				username = validate_username(request.POST.get("username", ""))
-			except Exception, e:
-				errors["username"] = validation_error_message(e)
+		if settings.REGISTRATION_ASK_USERNAME:
+			if request.POST.get("username", "").strip() != request.user.username:
+				try:
+					username = validate_username(request.POST.get("username", ""))
+				except Exception, e:
+					errors["username"] = validation_error_message(e)
 
 		if len(errors) == 0:
 			if username or password:
@@ -612,12 +626,12 @@ def profile(request):
 
 				return render_to_response('registration/registration_check_inbox.html', {
 					"email": email,
-					"site_name": APP_NICE_SHORT_NAME,
+					"site_name": settings.APP_NICE_SHORT_NAME,
 					}, context_instance=RequestContext(request))
 
 	return render_to_response('registration/profile.html', {
-		"site_name": APP_NICE_SHORT_NAME,
-		"ask_username": REGISTRATION_ASK_USERNAME,
+		"site_name": settings.APP_NICE_SHORT_NAME,
+		"ask_username": settings.REGISTRATION_ASK_USERNAME,
 		"sso": request.user.singlesignon.all(),
 		"errors": errors,
 		"success": " ".join(success) if len(success) > 0 else None,
@@ -646,11 +660,11 @@ class ChangeEmailAction:
 		return HttpResponseRedirect("/accounts/profile")
 		
 	def email_subject(self):
-		return APP_NICE_SHORT_NAME + ": Confirm Email Change"
+		return settings.APP_NICE_SHORT_NAME + ": Confirm Email Change"
 	def email_body(self):
 		return """Hello!
 
-You have requested to change your """ + APP_NICE_SHORT_NAME + """ account email address. To
+You have requested to change your """ + settings.APP_NICE_SHORT_NAME + """ account email address. To
 continue, please follow this link:
 
 <URL>
@@ -660,7 +674,7 @@ just ignore this email.
 
 All the best,
 
-""" + APP_NICE_SHORT_NAME + """
+""" + settings.APP_NICE_SHORT_NAME + """
 
 
 ---

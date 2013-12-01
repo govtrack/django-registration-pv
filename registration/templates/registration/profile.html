@@ -1,20 +1,17 @@
-{% extends "base.html" %}
+{% extends "registration/base.html" %}
 
 {% load registration_providers %}
 
-{% block title %}Account Settings -- {{site_name}}{% endblock %}
-{% block meta_description %}Your {{site_name}} account settings.{% endblock %}
+{% block title %}Account Settings{% endblock %}
 
-{% block head %}
+{% block body %}
 <style>
 form label {
 	display: inline-block;
 	width: 8em;
 }
 </style>
-{% endblock %}
 
-{% block body %}
 <h1>Account Settings</h1>
 	
 <p style="width: 40em; margin-top: 1em;">Use this page to change your account settings</p>
@@ -63,4 +60,3 @@ form label {
 {% include "registration/profile_singlesignon.html" %}
 
 {% endblock %}
-

@@ -3,12 +3,14 @@ from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
-import settings
+from django.conf import settings
 
 import base64
 import pickle
 import random
-from datetime import datetime, timedelta
+
+from django.utils import timezone
+from datetime import timedelta
 
 CODE_LENGTH = 16
 EXPIRATION_DAYS = 7
@@ -46,7 +48,7 @@ class Record(models.Model):
 		return pickle.loads(base64.decodestring(self.action))
 
 	def is_expired(self):
-		if (datetime.now() - self.created).days >= EXPIRATION_DAYS:
+		if (timezone.now() - self.created).days >= EXPIRATION_DAYS:
 			return True
 		return False
 	

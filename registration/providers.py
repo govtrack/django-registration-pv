@@ -1,12 +1,10 @@
 #;encoding=utf-8
-import settings
 
-import oauth2 as oauth
 import urlparse, urllib
 import json, base64
 from xml.dom import minidom
 
-from settings import SITE_ROOT_URL
+from django.conf import settings
 
 ########################################
 
@@ -19,34 +17,38 @@ try:
 except:
 	google_auth_mode = "openid"
 
-providers["google_openid"] = \
-	{	"displayname": "Google" + (" OpenID" if google_auth_mode != "openid" else ""),
-		"method": "openid2",
-		"xrds": "https://www.google.com/accounts/o8/id",
-		"extensions": {
-			"http://specs.openid.net/extensions/pape/1.0": { },
-			"http://specs.openid.net/extensions/ui/1.0": { "icon": "true" },
-			"http://openid.net/srv/ax/1.0": {
-				"mode": "fetch_request",
-				"required": "email",
-				"type.email": "http://schema.openid.net/contact/email"
+try:
+	import openid
+	providers["google_openid"] = \
+		{	"displayname": "Google" + (" OpenID" if google_auth_mode != "openid" else ""),
+			"method": "openid2",
+			"xrds": "https://www.google.com/accounts/o8/id",
+			"extensions": {
+				"http://specs.openid.net/extensions/pape/1.0": { },
+				"http://specs.openid.net/extensions/ui/1.0": { "icon": "true" },
+				"http://openid.net/srv/ax/1.0": {
+					"mode": "fetch_request",
+					"required": "email",
+					"type.email": "http://schema.openid.net/contact/email"
+					},
+				#"http://specs.openid.net/extensions/oauth/1.0": {
+				#	"consumer": settings.GOOGLE_OAUTH_TOKEN,
+				#	"scope": settings.GOOGLE_OAUTH_SCOPE
+				#	}
 				},
-			#"http://specs.openid.net/extensions/oauth/1.0": {
-			#	"consumer": settings.GOOGLE_OAUTH_TOKEN,
-			#	"scope": settings.GOOGLE_OAUTH_SCOPE
-			#	}
-			},
-		"trust_email": True,
-		"profile_uid": lambda profile : profile["id"],
-		"logo_urls": [
-			(16, "icons/sm/google16.png"),
-			(32, "icons/sm/google32.png"),
-			(48, "icons/sm/google48.png"),
-			],
-		"sort_order": 30,
-		"login": google_auth_mode == "openid",
-	}
-
+			"trust_email": True,
+			"profile_uid": lambda profile : profile["id"],
+			"logo_urls": [
+				(16, "icons/sm/google16.png"),
+				(32, "icons/sm/google32.png"),
+				(48, "icons/sm/google48.png"),
+				],
+			"sort_order": 30,
+			"login": google_auth_mode == "openid",
+		}
+except ImportError:
+	pass
+	
 try:
 	def twitter_get_profile(access_token):
 		client = create_oauth1_client("twitter", access_token)
@@ -227,8 +229,12 @@ except:
 class UserCancelledAuthentication(Exception):
 	pass
 
-from openid.store.filestore import FileOpenIDStore
-openid_store = FileOpenIDStore("/tmp/openid")
+try:
+	from openid.store.filestore import FileOpenIDStore
+	openid_store = FileOpenIDStore("/tmp/openid")
+except ImportError:
+	# allow for this library to not be installed
+	pass
 
 def openid2_get_redirect(request, provider, callback, scope, mode):
 	xrds = urllib.urlopen(providers[provider]["xrds"])
@@ -253,7 +259,7 @@ def openid2_get_redirect(request, provider, callback, scope, mode):
 	if mode == "compact": # works with Google
 		auth.addExtensionArg("http://specs.openid.net/extensions/ui/1.0", "mode", "popup")
 	
-	return auth.redirectURL(realm=SITE_ROOT_URL, return_to=callback)
+	return auth.redirectURL(realm=settings.SITE_ROOT_URL, return_to=callback)
 
 def openid2_finish_authentication(request, provider, original_callback):
 	from openid.consumer.consumer import Consumer, SUCCESS, FAILURE, CANCEL, SETUP_NEEDED
@@ -276,6 +282,7 @@ def openid2_finish_authentication(request, provider, original_callback):
 	return provider, ret.identity_url, profile
 
 def create_oauth1_client(provider, access_token, verifier = None):
+	import oauth2 as oauth
 	consumer = oauth.Consumer(providers[provider]["oauth_token"], providers[provider]["oauth_token_secret"])
 	token = oauth.Token(access_token['oauth_token'], access_token['oauth_token_secret'])
 	if verifier != None:
@@ -287,6 +294,7 @@ def create_oauth1_client(provider, access_token, verifier = None):
 
 def oauth1_get_redirect(request, provider, callback, scope, mode):
 	"""Gets the URL for the redirect that begins the OAuth 1 authentication process."""
+	import oauth2 as oauth
 	consumer = oauth.Consumer(providers[provider]["oauth_token"], providers[provider]["oauth_token_secret"])
 	client = oauth.Client(consumer)
 	

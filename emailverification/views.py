@@ -6,8 +6,6 @@ import datetime
 
 from models import *
 
-from settings import DEBUG
-
 def processcode(request, code):
 	try:
 		rec = Record.objects.get(code=code)

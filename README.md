@@ -1,5 +1,5 @@
-Django Registration App by POPVOX
-=================================
+Django Registration App (originally by POPVOX)
+==============================================
 
 This app provides infrastructure for new user registration including support
 for social logins (built-in support for Google, Twitter, LinkedIn, and Facebook).
@@ -12,17 +12,15 @@ link sent to them in an email. See emailverification/README.txt for details.
 
 Utilities are also provided to manage bounced mail.
 
-Dependencies
-------------
-
-python-openid (Ubuntu package)
-
 Configuration
 -------------
 
-Make the icons directory accessible as /media/icons/sm (i.e. social media).
+After cloning this repository, make the `registration` and `emailverification` directories
+available on your Python path. Then install the dependencies:
 
-In settings.py, add 'emailverification' and 'registration' to your INSTALLED_APPS.
+    pip install -r requirements.txt
+
+In settings.py, add `emailverification` and `registration` to your INSTALLED_APPS.
 
 Then set:
 
@@ -30,7 +28,7 @@ Then set:
     SERVER_EMAIL = "MySite <noreply@example.org>" # From: address on verification emails
     REGISTRATION_ASK_USERNAME = True
     
-If REGISTRATION_ASK_USERNAME is True, then the user is always asked for
+If `REGISTRATION_ASK_USERNAME` is True, then the user is always asked for
 a username. If False, a username is guessed when enough information is
 provided by the login provider.
 		
@@ -41,16 +39,16 @@ Optionally set:
 		
 Add records to your URLConf like this (you can use any base path):
 
-    (r'^emailverif/', include('emailverification.urls')),
-    (r'^registration/', include('registration.urls')),
+    url(r'^emailverif/', include('emailverification.urls')),
+    url(r'^registration/', include('registration.urls')),
     
-The registratin app provides a new user registration page at /registration/signup.
+The registration app provides a new user registration page at /registration/signup.
 
 You will probably also want to use:
 
-    (r'^accounts/login$', 'registration.views.loginform'),
-    (r'^accounts/logout$', 'django.contrib.auth.views.logout', { "redirect_field_name": "next" }),
-    (r'^accounts/profile$', 'registration.views.profile'),
+    url(r'^accounts/login/?$', 'registration.views.loginform'),
+    url(r'^accounts/logout/?$', 'registration.views.logoutview'),
+    url(r'^accounts/profile/?$', 'registration.views.profile'),
 
 You will probably want to override the templates in
 
@@ -61,16 +59,17 @@ You will probably want to override the templates in
 by either editing them in place or copying the directories to your site's
 root templates directory and editing the copies there. 
 
-Run python manage.py syncdb to create the necessary database tables.
+Run `python manage.py syncdb` to create the necessary database tables.
 
 Beyond this, many of the components of this app are optional. The dependencies
-and configuration for the optional parts are given here:
+and configuration for the optional parts are given next.
+
+Configuring Login Providers
+---------------------------
 
 reCAPTCHA on new account creations:
 
-	dependencies:
-	
-	python-recaptcha <http://pypi.python.org/pypi/recaptcha-client>
+	dependencies: python-recaptcha <http://pypi.python.org/pypi/recaptcha-client>
 
 	settings.py:
 
@@ -79,18 +78,14 @@ reCAPTCHA on new account creations:
 
 Google login with OpenID:
 
-	dependencies:
-
-	python-openid <https://github.com/openid/python-openid>
+	dependencies: python-openid <https://github.com/openid/python-openid>
 
 	No configuration necessary.
 
 Google login with OAuth 1 (not recommended unless you are accessing
 the user's Google resources):
 
-	dependencies:
-
-	python-oauth2 <http://github.com/simplegeo/python-oauth2>
+	dependencies: python-oauth2 <http://github.com/simplegeo/python-oauth2>
 
 	settings.py:
 
@@ -100,9 +95,7 @@ the user's Google resources):
 
 Twitter login with OAuth 1:
 
-	dependencies:
-
-	python-oauth2 <http://github.com/simplegeo/python-oauth2>
+	dependencies: python-oauth2 <http://github.com/simplegeo/python-oauth2>
 
 	settings.py:
 
@@ -110,6 +103,8 @@ Twitter login with OAuth 1:
 	TWITTER_OAUTH_TOKEN_SECRET = "..."
 
 LinkedIn login with OAuth 1:
+
+	dependencies: python-oauth2 <http://github.com/simplegeo/python-oauth2>
 
 	settings.py:
 
@@ -133,7 +128,7 @@ When users register with an email address, they are sent an email to
 confirm their address. The table that stores state for that should
 be cleared periodically (e.g. daily) with:
 
-  python manage.py clear_expired_email_verifications
+    python manage.py clear_expired_email_verifications
   
 
 	
@@ -183,7 +178,7 @@ It is up to you to do something with the BouncedEmail records.
 Copyright
 =========
 
-Copyright (C) 2011 POPVOX.com
+Copyright (C) 2011 POPVOX.com, 2012-2013 Civic Impulse LLC
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
