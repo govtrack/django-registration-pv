@@ -20,7 +20,11 @@ available on your Python path. Then install the dependencies:
 
     pip install -r requirements.txt
 
-In settings.py, add `emailverification` and `registration` to your INSTALLED_APPS.
+In settings.py, add to your INSTALLED_APPS:
+
+	django.contrib.staticfiles
+	emailverification
+	registration
 
 Then set:
 
