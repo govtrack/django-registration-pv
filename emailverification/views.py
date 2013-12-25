@@ -41,7 +41,7 @@ def killcode(request, code):
 def emailping(request, code):
 	try:
 		ping = Ping.objects.get(key=code)
-		ping.pingtime = datetime.now()
+		ping.pingtime = datetime.datetime.now()
 		ping.save()
 	except Ping.DoesNotExist:
 		pass
