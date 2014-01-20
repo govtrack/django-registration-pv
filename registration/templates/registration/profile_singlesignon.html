@@ -5,7 +5,7 @@
 	{% for auth in user.singlesignon.all %}
 	<div style="clear: both;">
 		<div style="float: left; width:32; height: 32; margin-right: 1em; margin-bottom: 3px">
-			<img src="{{MEDIA_URL}}{{ auth.provider|provider_logo:32 }}"/>
+			<img src="{{STATIC_URL}}{{ auth.provider|provider_logo:32 }}"/>
 		</div>
 		<div style="font-weight: bold">{{ auth.provider|provider_name }}</div>
 		<div>{% firstof auth.profile.screen_name auth.profile.email %}</div>
@@ -20,7 +20,7 @@
 {% for provider in ""|all_providers %}
 	<div style="float: left; text-align: center; margin-right: 1.5em">
 		<a href="{% url "registration.views.external_start" "associate" provider %}?next={% url "registration.views.profile" %}">
-			<div><img src="{{MEDIA_URL}}{{ provider|provider_logo:32 }}"/></div>
+			<div><img src="{{STATIC_URL}}{{ provider|provider_logo:32 }}"/></div>
 			<div>{{ provider|provider_name }}</div>
 		</a>
 	</div>
