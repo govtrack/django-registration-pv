@@ -7,7 +7,7 @@
 </li>
 {% for provider in ""|new_account_providers %}
 <li>
-	<a class="btn social_{{ provider }}" href="{% url "registration.views.external_start" "login" provider %}{% if singlesignon_next %}?next={{singlesignon_next|urlencode}}{% endif %}{{singlesignon_params}}" style="border: none" title="Log in or register with {{ provider|provider_name }}" rel="nofollow" {{singlesignon_a_attrs|safe}}>
+	<a class="btn social_{{ provider }}" href="{% url "registration.views.external_start" "login" provider %}{% if singlesignon_next %}?next={{singlesignon_next|urlencode}}{% endif %}{{singlesignon_params}}" style="border: none; padding: 0;" title="Log in or register with {{ provider|provider_name }}" rel="nofollow" {{singlesignon_a_attrs|safe}}>
 		<img src="{% static provider|provider_logo:32 %}" width="32" height="32" alt="{{ provider|provider_name }}"/>
 	</a>
 </li>
