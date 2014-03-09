@@ -231,7 +231,7 @@ class UserCancelledAuthentication(Exception):
 
 try:
 	from openid.store.filestore import FileOpenIDStore
-	openid_store = FileOpenIDStore("/tmp/openid")
+	openid_store = FileOpenIDStore(getattr(settings, "OPENID_TEMP_FOLDER", "/tmp/openid"))
 except ImportError:
 	# allow for this library to not be installed
 	pass
