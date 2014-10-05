@@ -3,10 +3,9 @@ from django.contrib.auth.models import User
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseServerError
-from django.utils import simplejson
 from django import forms
 
-import sys
+import sys, json
 
 try:
 	import recaptcha.client.captcha
@@ -139,17 +138,17 @@ def json_response(f):
 			ret = f(*args, **kwargs)
 			if isinstance(ret, HttpResponse):
 				return ret
-			ret = simplejson.dumps(ret)
-			resp = HttpResponse(ret, mimetype="application/json")
+			ret = json.dumps(ret)
+			resp = HttpResponse(ret, content_type="application/json")
 			resp["Content-Length"] = len(ret)
 			return resp
 		except ValueError, e:
 			sys.stderr.write(unicode(e) + "\n")
-			return HttpResponse(simplejson.dumps({ "status": "fail", "msg": unicode(e) }), mimetype="application/json")
+			return HttpResponse(json.dumps({ "status": "fail", "msg": unicode(e) }), content_type="application/json")
 		except forms.ValidationError, e :
 			m = validation_error_message(e)
 			sys.stderr.write(unicode(m) + "\n")
-			return HttpResponse(simplejson.dumps({ "status": "fail", "msg": m, "field": getattr(e, "source_field", None) }), mimetype="application/json")
+			return HttpResponse(json.dumps({ "status": "fail", "msg": m, "field": getattr(e, "source_field", None) }), content_type="application/json")
 		except Exception, e:
 			if settings.DEBUG:
 				import traceback
@@ -157,6 +156,6 @@ def json_response(f):
 			else:
 				sys.stderr.write(unicode(e) + "\n")
 				raise
-			return HttpResponseServerError(simplejson.dumps({ "status": "generic-failure", "msg": unicode(e) }), mimetype="application/json")
+			return HttpResponseServerError(json.dumps({ "status": "generic-failure", "msg": unicode(e) }), content_type="application/json")
 	return g
 	
