@@ -13,14 +13,9 @@ from django.conf import settings
 providers = { }
 
 try:
-	google_auth_mode = settings.GOOGLE_AUTH_MODE
-except:
-	google_auth_mode = "openid"
-
-try:
 	import openid
 	providers["google_openid"] = \
-		{	"displayname": "Google" + (" OpenID" if google_auth_mode != "openid" else ""),
+		{	"displayname": "Google OpenID (legacy)",
 			"method": "openid2",
 			"xrds": "https://www.google.com/accounts/o8/id",
 			"extensions": {
@@ -44,7 +39,8 @@ try:
 				(48, "icons/sm/google48.png"),
 				],
 			"sort_order": 30,
-			"login": google_auth_mode == "openid",
+			"login": False,
+			"associate": False,
 		}
 except ImportError:
 	pass
@@ -95,7 +91,7 @@ try:
 		return profile
 		
 	providers["google_oauth"] = \
-		{	"displayname": "Google" + (" OAuth1" if google_auth_mode != "oauth1" else ""),
+		{	"displayname": "Google OAuth1 (legacy)",
 			"method": "oauth1",
 			"request_token_url": "https://www.google.com/accounts/OAuthGetRequestToken",
 			"access_token_url": "https://www.google.com/accounts/OAuthGetAccessToken",
@@ -112,7 +108,7 @@ try:
 				(48, "icons/sm/google48.png"),
 				],
 			"sort_order": 60,
-			"login": google_auth_mode == "oauth1"
+			"login": False,
 		}
 except:
 	# silently fail if any of the settings aren't set
@@ -129,27 +125,28 @@ try:
 		return body
 		
 	providers["google_oauth2"] = \
-		{	"displayname": "Google" + (" OAuth2" if google_auth_mode != "oauth2" else ""),
+		{	"displayname": "Google",
 			"method": "oauth2",
 			"authenticate_url": "https://accounts.google.com/o/oauth2/auth",
 			"access_token_url": "https://accounts.google.com/o/oauth2/token",
 			"access_token_method": "POST",
 			"additional_request_parameters": {
 				"response_type": "code",
-				"scope": settings.GOOGLE_AUTH_SCOPE,
+				"scope": settings.GOOGLE_AUTH_SCOPE, # 'openid email' is usual
+				"openid.realm": settings.SITE_ROOT_URL, # OpenID 2.0 migration
 			},
 			"clientid": settings.GOOGLE_APP_ID,
 			"clientsecret": settings.GOOGLE_APP_SECRET,
 			"trust_email": True,
 			"load_profile": google_get_profile2,
 			"profile_uid": lambda profile : profile["sub"],
+			"migrate_from": lambda profile : ('google_openid', profile["openid_id"]) if profile.get("openid_id") else None,
 			"logo_urls": [
 				(16, "icons/sm/google16.png"),
 				(32, "icons/sm/google32.png"),
 				(48, "icons/sm/google48.png"),
 				],
 			"sort_order": 31,
-			"login": google_auth_mode == "oauth2",
 		}
 except:
 	# silently fail if any of the settings aren't set

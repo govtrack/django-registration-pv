@@ -14,12 +14,12 @@ def get_providers(filter=lambda p : True):
 @register.filter
 @stringfilter
 def all_providers(value):
-	return get_providers()
+	return get_providers(filter = lambda p : p.get('associate', True))
 
 @register.filter
 @stringfilter
 def new_account_providers(value):
-	return get_providers(filter = lambda p : "login" not in p or p["login"])
+	return get_providers(filter = lambda p : p.get('login', True))
 
 @register.filter
 @stringfilter

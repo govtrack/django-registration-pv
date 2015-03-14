@@ -171,8 +171,18 @@ def external_return(request, login_associate, provider):
 		request.goal = { "goal": "oauth-fail" }
 		messages.error(request, "There was an error logging in.")
 		return HttpResponseRedirect(request.session["oauth_finish_next"] if "oauth_finish_next" in request.session else reverse(loginform))
-		
+
+	# The provider specifies a persistent user ID.
 	uid = providers.providers[provider]["profile_uid"](profile)
+
+	# The provider may request that on new accounts we migrate from an old
+	# provider/uid pair.
+	migrate_from = providers.providers[provider].get("migrate_from", lambda p : None)(profile)
+	if migrate_from:
+		try:
+			migrate_from = AuthRecord.objects.get(provider=migrate_from[0], uid=migrate_from[1])
+		except:
+			migrate_from = None
 	
 	# be sure to get this before possibly logging the user out, which clears session state
 	next = settings.LOGIN_REDIRECT_URL
@@ -189,6 +199,11 @@ def external_return(request, login_associate, provider):
 		if login_associate == "associate" and request.user.is_authenticated():
 			user = request.user
 			request.goal = { "goal": "oauth-associate" }
+
+		# If we are migrating from an old id scheme, we have loaded an old AuthRecord.
+		# Copy the user from that.
+		elif migrate_from:
+			user = migrate_from.user
 			
 		# If the profile provides a trusted email address which is tied to a
 		# registered account here, then we can log them in and create
