@@ -24,11 +24,13 @@ def new_account_providers(value):
 @register.filter
 @stringfilter
 def provider_name(value):
+	if value not in registration.providers.providers: return value
 	return registration.providers.providers[value]["displayname"]
 
 @register.filter
 @stringfilter
 def provider_logo(value, size):
+	if value not in registration.providers.providers: return ""
 	if not "logo_urls" in registration.providers.providers[value]:
 		return ""
 	url = ""
