@@ -82,4 +82,6 @@ class BouncedEmail(models.Model):
 	firstbouncetime = models.DateTimeField(auto_now_add=True)
 	bounces = models.IntegerField(default=1)
 	
-
+	def __str__(self):
+		return "%s %s %d" % (self.user, self.firstbouncetime, self.bounces)
+	
