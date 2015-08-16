@@ -601,9 +601,9 @@ def profile(request):
 	
 	if request.method == "POST":
 		email = None
-		if request.POST.get("email", "").strip() != request.user.email:
+		if request.POST.get("email", "").strip() != "":
 			try:
-				email = validate_email(request.POST.get("email", ""))
+				email = validate_email(request.POST.get("email", ""), skip_if_this_user=request.user)
 			except Exception, e:
 				errors["email"] = validation_error_message(e)
 	
@@ -623,7 +623,7 @@ def profile(request):
 					errors["username"] = validation_error_message(e)
 
 		if len(errors) == 0:
-			if username or password:
+			if username or password or email:
 				u = request.user
 				if password:
 					u.set_password(password)
@@ -631,6 +631,12 @@ def profile(request):
 				if username:
 					u.username = username
 					success.append("Your user name was updated.")
+				if email and email.lower() == u.email.lower():
+					# Maybe the case is being changed. Or nothing is being changed.
+					if email != u.email:
+						success.append("Your email address was updated.")
+					u.email = email
+					email = None # don't send a confirmation email
 				u.save()
 				
 			if email:
