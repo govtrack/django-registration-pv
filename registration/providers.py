@@ -1,7 +1,7 @@
 #;encoding=utf-8
 
 import urlparse, urllib
-import json, base64
+import json, base64, random, string
 from xml.dom import minidom
 
 from django.conf import settings
@@ -370,6 +370,10 @@ def oauth2_get_redirect(request, provider, callback, scope, mode):
 	
 	if mode == "compact":
 		body["display"] = "touch" # works in Facebook
+
+	# CSRF protection
+	body["state"] = ''.join(random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(32))
+	request.session["registration-oauth2-" + provider + "-state"] = body["state"]
 	
 	url = providers[provider]["authenticate_url"] + "?" + urllib.urlencode(body)
 	return url
@@ -377,6 +381,7 @@ def oauth2_get_redirect(request, provider, callback, scope, mode):
 def oauth2_finish_authentication(request, provider, original_callback):
 	"""Finishes the authentication for OAuth2. Raises an Exception if the authentication had an error, or otherwise returns a tuple (provider, access_tok, profile) where provider is the provider id (e.g. "twitter") that started the authentication and profile is a dict returned by the provider that has profile information about the user."""
 
+	# check error from OAuth provider
 	if "error_reason" in request.GET:
 		if request.GET["error_reason"] == "user_denied":
 			raise UserCancelledAuthentication()
@@ -384,7 +389,16 @@ def oauth2_finish_authentication(request, provider, original_callback):
 			raise Exception("OAuth2 Failed: "  + request.GET["error_description"])
 		else:
 			raise Exception("OAuth2 Failed: "  + request.GET["error_reason"])
+
+	# check CSRF protection
+	if request.session.get("registration-oauth2-" + provider + "-state", "UNSET1") != request.GET.get("state", "UNSET2"):
+		raise Exception("OAuth2 Failed: CSRF protection state parameter invalid.")
+	try:
+		del request.session["registration-oauth2-" + provider + "-state"]
+	except KeyError:
+		pass
 	
+	# convert to an access token
 	qsargs = {
 		"client_id": providers[provider]["clientid"],
 		"redirect_uri": original_callback,
