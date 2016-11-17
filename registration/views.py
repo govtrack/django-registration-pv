@@ -1,5 +1,5 @@
 from django import forms
-from django.http import HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpResponseNotFound, HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse, resolve
 from django.shortcuts import render_to_response
 from django.contrib.auth import authenticate, login, logout
@@ -145,7 +145,11 @@ def external_start(request, login_associate, provider):
 	scope = request.GET.get("scope", None)
 	mode = request.GET.get("mode", None)
 
-	response = HttpResponseRedirect( providers.methods[providers.providers[provider]["method"]]["get_redirect"](request, provider, callback, scope, mode))
+	try:
+		redirect_url = providers.methods[providers.providers[provider]["method"]]["get_redirect"](request, provider, callback, scope, mode)
+	except Exception as e:
+		return HttpResponse("There was a problem beginning the login process: " + str(e))
+	response = HttpResponseRedirect(redirect_url)
 	response['Cache-Control'] = 'no-store'
 	return response
 		
