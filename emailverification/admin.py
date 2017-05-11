@@ -14,7 +14,10 @@ class RecordAdmin(admin.ModelAdmin):
 
 class PingAdmin(admin.ModelAdmin):
 	readonly_fields = ("user",)
+
 class BouncedEmailAdmin(admin.ModelAdmin):
+	list_display = ('user', 'firstbouncetime', 'bounces')
+	search_fields = ['user__email']
 	readonly_fields = ("user",)
 
 admin.site.register(Record, RecordAdmin)
