@@ -1,6 +1,5 @@
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 
 import datetime
 
@@ -10,10 +9,10 @@ def processcode(request, code):
 	try:
 		rec = Record.objects.get(code=code)
 	except:
-		return render_to_response('emailverification/badcode.html', { "code": code }, context_instance=RequestContext(request))
+		return render(request, 'emailverification/badcode.html', { "code": code })
 
 	if rec.is_expired():
-		return render_to_response('emailverification/expired.html',  context_instance=RequestContext(request))
+		return render(request, 'emailverification/expired.html')
 
 	rec.hits += 1
 	rec.save() # save early in case view raises an exception
@@ -31,12 +30,12 @@ def killcode(request, code):
 	try:
 		rec = Record.objects.get(code=code)
 	except:
-		return render_to_response('emailverification/badcode.html', { "code": code }, context_instance=RequestContext(request))
+		return render(request, 'emailverification/badcode.html', { "code": code })
 
 	rec.killed = True
 	rec.save()
 
-	return render_to_response('emailverification/codekilled.html', { "code": code }, context_instance=RequestContext(request))
+	return render(request, 'emailverification/codekilled.html', { "code": code })
 
 def emailping(request, code):
 	try:

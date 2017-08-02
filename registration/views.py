@@ -1,10 +1,9 @@
 from django import forms
 from django.http import HttpResponseNotFound, HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse, resolve
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.backends import ModelBackend
-from django.template import RequestContext
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
@@ -54,13 +53,12 @@ def loginform(request):
 			else:
 				errors = "Your email and password were incorrect."
 		    
-	return render_to_response('registration/login.html', {
+	return render(request, 'registration/login.html', {
 		"errors": errors,
 		"email": "" if not "email" in request.POST else request.POST["email"],
 		"password": "" if not "password" in request.POST else request.POST["password"],
-		"next": "" if not "next" in request.REQUEST else request.REQUEST["next"],
-		},
-		context_instance=RequestContext(request))
+		"next": request.GET.get("next", request.POST.get("next", "")),
+		})
 
 def logoutview(request):
 	if request.user.is_authenticated:
@@ -72,8 +70,7 @@ def logoutview(request):
 	except Exception, e:
 		pass # fall through
 
-	return render_to_response('registration/loggedout.html', {},
-		context_instance=RequestContext(request))
+	return render(request, 'registration/loggedout.html', {})
 
 class EmailPasswordLoginBackend(ModelBackend):
 	"""
@@ -390,7 +387,7 @@ def registration_utility(request, provider, profile, axn):
 	if len(errors) > 0 or request.method != "POST":
 		# Show the form again with the last entered field values and the
 		# validation error message.
-		return render_to_response('registration/register.html',
+		return render(request, 'registration/register.html',
 			{
 				"provider": provider,
 				"username": username,
@@ -398,8 +395,7 @@ def registration_utility(request, provider, profile, axn):
 				"email": email,
 				"errors": errors,
 				"site_name": settings.APP_NICE_SHORT_NAME,
-			},
-			context_instance=RequestContext(request))
+			})
 	
 	# Beign creating the account.
 	
@@ -418,10 +414,10 @@ def registration_utility(request, provider, profile, axn):
 	
 	send_email_verification(email, None, axn)
 	
-	return render_to_response('registration/registration_check_inbox.html', {
+	return render(request, 'registration/registration_check_inbox.html', {
 		"email": email,
 		"site_name": settings.APP_NICE_SHORT_NAME,
-		}, context_instance=RequestContext(request))
+		})
 
 class RegisterUserAction:
 	username = None
@@ -545,11 +541,10 @@ class ResetPasswordAction:
 		user = authenticate(user_object = user)
 		login(request, user)
 		
-		return render_to_response('registration/reset_password_done.html', {
+		return render(request, 'registration/reset_password_done.html', {
 			"newpassword": newpw,
 			"site_name": settings.APP_NICE_SHORT_NAME,
-			},
-			context_instance=RequestContext(request))
+			})
 		
 	def email_subject(self):
 		return settings.APP_NICE_SHORT_NAME + ": Reset Password"
@@ -591,12 +586,11 @@ def resetpassword(request):
 		except:
 			status = "The reCAPTCHA validation words you typed weren't right."
 		
-	return render_to_response('registration/reset_password.html', {
+	return render(request, 'registration/reset_password.html', {
 		"status": status,
 		"captcha": captcha_html(),
 		"site_name": settings.APP_NICE_SHORT_NAME,
-		},
-		context_instance=RequestContext(request))
+		})
 
 @login_required
 def profile(request):
@@ -649,19 +643,18 @@ def profile(request):
 				axn.email = email
 				send_email_verification(email, None, axn)
 
-				return render_to_response('registration/registration_check_inbox.html', {
+				return render(request, 'registration/registration_check_inbox.html', {
 					"email": email,
 					"site_name": settings.APP_NICE_SHORT_NAME,
-					}, context_instance=RequestContext(request))
+					})
 
-	return render_to_response('registration/profile.html', {
+	return render(request, 'registration/profile.html', {
 		"site_name": settings.APP_NICE_SHORT_NAME,
 		"ask_username": settings.REGISTRATION_ASK_USERNAME,
 		"sso": request.user.singlesignon.all(),
 		"errors": errors,
 		"success": " ".join(success) if len(success) > 0 else None,
-		},
-		context_instance=RequestContext(request))
+		})
 
 class ChangeEmailAction:
 	userid = None
