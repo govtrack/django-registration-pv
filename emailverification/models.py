@@ -59,14 +59,14 @@ class Record(models.Model):
 		return getattr(settings, 'SITE_ROOT_URL', "http://%s" % Site.objects.get_current().domain) \
 			+ reverse("emailverification.views.killcode", args=[self.code])
 
+def make_key():
+	import os, string
+	return "".join( string.letters[ord(b) % len(string.letters)] for b in os.urandom(12) )
+
 class Ping(models.Model):
 	"""A record to verify that an email address is still valid using a pingback."""
 
-	def make_key():
-		import os, string
-		return "".join( string.letters[ord(b) % len(string.letters)] for b in os.urandom(12) )
-
-	user = models.ForeignKey(User, unique=True, db_index=True)
+	user = models.OneToOneField(User, db_index=True)
 	key = models.CharField(max_length=12, db_index=True, unique=True, default=make_key)
 	pingtime = models.DateTimeField(blank=True, null=True)
 	
@@ -78,7 +78,7 @@ class Ping(models.Model):
 class BouncedEmail(models.Model):
 	"""A record of a bounced email to a user."""
 
-	user = models.ForeignKey(User, unique=True, db_index=True)
+	user = models.OneToOneField(User, db_index=True)
 	firstbouncetime = models.DateTimeField(auto_now_add=True)
 	bounces = models.IntegerField(default=1)
 	
