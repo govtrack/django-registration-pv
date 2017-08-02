@@ -63,7 +63,7 @@ def loginform(request):
 		context_instance=RequestContext(request))
 
 def logoutview(request):
-	if request.user.is_authenticated():
+	if request.user.is_authenticated:
 		logout(request)
 
 	try:
@@ -126,7 +126,7 @@ def external_start(request, login_associate, provider):
 	if not provider in providers.providers:
 		return HttpResponseNotFound()
 
-	if login_associate == "associate" and not request.user.is_authenticated():
+	if login_associate == "associate" and not request.user.is_authenticated:
 		login_associate = "login"
 
 	if "next" in request.GET:
@@ -200,7 +200,7 @@ def external_return(request, login_associate, provider):
 		# If we are doing an association to an existing account, take care of it
 		# now and redirect.
 		user = None
-		if login_associate == "associate" and request.user.is_authenticated():
+		if login_associate == "associate" and request.user.is_authenticated:
 			user = request.user
 			request.goal = { "goal": "oauth-associate" }
 
@@ -229,7 +229,7 @@ def external_return(request, login_associate, provider):
 			rec.save()
 			
 			if user != request.user: # new AuthRecord for existing account
-				if request.user.is_authenticated(): # avoid clearing session state
+				if request.user.is_authenticated: # avoid clearing session state
 					logout(request)
 				user = authenticate(user_object = user)
 				login(request, user)
@@ -237,7 +237,7 @@ def external_return(request, login_associate, provider):
 			return HttpResponseRedirect(next)
 			
 		# Otherwise log the user out so we can do a new user registration.
-		if request.user.is_authenticated():
+		if request.user.is_authenticated:
 			logout(request)
 		
 		# This is a third-party login that causes a new user registration. We need
@@ -258,7 +258,7 @@ def external_return(request, login_associate, provider):
 	rr.save()
 	
 	# If we are doing an association....
-	if login_associate == "associate" and request.user.is_authenticated():
+	if login_associate == "associate" and request.user.is_authenticated:
 		request.goal = { "goal": "oauth-associate" }
 		
 		if rr.user != request.user:
@@ -285,13 +285,13 @@ def external_return(request, login_associate, provider):
 		# switch the login to that user. Otherwise, the user is already logged in with
 		# that account so there is nothing to do.
 		request.goal = { "goal": "oauth-login" }
-		if not request.user.is_authenticated() or (request.user.is_authenticated() and request.user != rr.user):
+		if not request.user.is_authenticated or (request.user.is_authenticated and request.user != rr.user):
 			if not rr.user.is_active:
 				# Can't log in an inactive user.
 				messages.error(request, "Your account is disabled.")
 				return HttpResponseRedirect(reverse(loginform))
 				
-			if request.user.is_authenticated():
+			if request.user.is_authenticated:
 				# The auth record points to a different user, so log the user out and
 				# then log them back in as the other user.
 				prev_username = request.user.username
@@ -306,7 +306,7 @@ def external_return(request, login_associate, provider):
 def external_finish(request):
 	if not "registration_credentials" in request.session:
 		# User is coming back to this page later on for no good reason?
-		if request.user.is_authenticated():
+		if request.user.is_authenticated:
 			return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
 		else:
 			return HttpResponseRedirect("/")

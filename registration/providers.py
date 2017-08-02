@@ -357,7 +357,7 @@ def oauth2_get_redirect(request, provider, callback, scope, mode):
 	# Google: When doing an association (rather than login), force the user
 	# to choose an account since it's possible they already have an account
 	# associated with the same provider.
-	elif request.user.is_authenticated():
+	elif request.user.is_authenticated:
 		body["prompt"] = "select_account"
 
 	if "additional_request_parameters" in providers[provider]:
