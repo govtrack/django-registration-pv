@@ -1,8 +1,9 @@
-from django.conf.urls import *
+from django.conf.urls import url
 
-urlpatterns = patterns('',
-    (r'^code/([0-9A-Z]+)$', 'emailverification.views.processcode'),
-    (r'^code/delete/([0-9A-Z]+)$', 'emailverification.views.killcode'),
-    (r'^ping/([a-zA-Z]+)$', 'emailverification.views.emailping'),
-)
+import emailverification.views
 
+urlpatterns = [
+    url(r'^code/([0-9A-Z]+)$', emailverification.views.processcode),
+    url(r'^code/delete/([0-9A-Z]+)$', emailverification.views.killcode),
+    url(r'^ping/([a-zA-Z]+)$', emailverification.views.emailping),
+]
