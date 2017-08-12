@@ -12,6 +12,8 @@ import random
 from django.utils import timezone
 from datetime import timedelta
 
+import emailverification.views
+
 CODE_LENGTH = 16
 EXPIRATION_DAYS = 7
 RETRY_DELAYS = [
@@ -54,10 +56,10 @@ class Record(models.Model):
 	
 	def url(self):
 		return getattr(settings, 'SITE_ROOT_URL', "http://%s" % Site.objects.get_current().domain) \
-			+ reverse("emailverification.views.processcode", args=[self.code])
+			+ reverse(emailverification.views.processcode, args=[self.code])
 	def killurl(self):
 		return getattr(settings, 'SITE_ROOT_URL', "http://%s" % Site.objects.get_current().domain) \
-			+ reverse("emailverification.views.killcode", args=[self.code])
+			+ reverse(emailverification.views.killcode, args=[self.code])
 
 def make_key():
 	import os, string
@@ -73,7 +75,7 @@ class Ping(models.Model):
 	@staticmethod
 	def get_ping_url(user):
 		ping, isnew = Ping.objects.get_or_create(user=user)
-		return settings.SITE_ROOT_URL + reverse("emailverification.views.emailping", args=[ping.key])
+		return settings.SITE_ROOT_URL + reverse(emailverification.views.emailping, args=[ping.key])
 
 class BouncedEmail(models.Model):
 	"""A record of a bounced email to a user."""

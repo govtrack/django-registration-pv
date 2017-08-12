@@ -3,9 +3,9 @@ from django.shortcuts import render
 
 import datetime
 
-from models import *
-
 def processcode(request, code):
+	from emailverification.models import Record, Ping
+
 	try:
 		rec = Record.objects.get(code=code)
 	except:
@@ -27,6 +27,7 @@ def processcode(request, code):
 	return ret
 	
 def killcode(request, code):
+	from emailverification.models import Record, Ping
 	try:
 		rec = Record.objects.get(code=code)
 	except:
@@ -38,6 +39,7 @@ def killcode(request, code):
 	return render(request, 'emailverification/codekilled.html', { "code": code })
 
 def emailping(request, code):
+	from emailverification.models import Record, Ping
 	try:
 		ping = Ping.objects.get(key=code)
 		ping.pingtime = datetime.datetime.now()
