@@ -1,1 +1,2 @@
 django-picklefield
+git+https://github.com/if-then-fund/django-html-emailer

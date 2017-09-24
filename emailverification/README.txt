@@ -73,25 +73,41 @@ class RegisterUserAction:
 	username = None
 	password = None
 	
-	def email_subject(self):
-		return "[subjectline of email to send user with link]"
-	
-	def email_body(self):
-		return """Thanks for creating an account. To verify your account just follow this link:
+	@property
+	def email_template(self):
+		return "registration/email/register"
 
-<URL>
-
-All the best."""
 	
 	def get_response(self, request, vrec):
 		user = User.objects.create_user(self.username, self.email, self.password)
 		user.save()
 		login(request, user)
 		return HttpResponseRedirect("/home#welcome")
+
 =================================================
 
-Within the string returned by email_body, "<URL>" will be replaced by the
-URL that the user should click on to execute the callback action.
+Then set the subject and body in templates:
+
+registration/email/register_subject.txt:
+
+=================================================
+[subjectline of email to send user with link]
+=================================================
+
+registration/email/register.md:
+	
+=================================================
+Thanks for creating an account. To verify your account just follow this link:
+
+{return_url}
+
+All the best.
+
+To stop receiving these emails, click {{kill_url}}.
+=================================================
+
+If the action object has a function `email_template_context` it should return a dict
+that provides template context variables.
 
 In some view in response to the user submitting a form, you'll typically
 run this:
@@ -146,33 +162,6 @@ EMAILVERIFICATION_FROMADDR or SERVER_EMAIL settings. e.g.:
 		return "info@example.com"
 =================================================
 
-The email can also contain an HTML part. The HTML part is assembled
-using the Django templating system. Add a method to the action
-class called email_html_template which returns a tuple containing the
-name of the template to use and a dict of context variables, e.g.:
-
-=================================================
-	def email_html_template(self):
-		return ("email/html_template.html", { "message": "Hello!" })
-=================================================
-		
-Typically the template will use {% extends "templatename" %} to apply
-a default email theme used across actions.
-		
-Instead of using "<URL>" in the template, a "URL" context variable will
-be set instead, which can be accessed with {{URL|safe}}.
-
-Be careful with adding an HTML part because you might forget to keep
-the text and HTML content in sync!
-
-A template can also be used for the text part. Provide a email_text_template
-function instead of email_body. email_text_template works the same way
-as email_html_template. But be careful because Django will assume that
-HTML escaping is still in effect in the template, so any values brought in
-via {{...}} should probably be marked as safe, e.g. {{myvariable|safe}},
-to avoid HTML escaping.
-
-
 AUTO-RESENDING EMAILS
 
 The module has a utility to automatically re-send up to twice until a user
@@ -216,32 +205,7 @@ method that returns True. Use the method to prevent resending an email for
 some application-specific reason, such as the action being completed some other
 way other than clicking the link in the email. When an action class supports sending
 re-tries, it is a good idea to include in the message body an alternative link that
-halts sending of future retries. This can be done with either:
-
-	in a plain text body, the substitution string <KILL_URL>
-	in a text or HTML template, the context variable KILL_URL
-
-For instance:
-
-=================================================
-class RegisterUserAction:
-	...
-	
-	def email_body(self):
-		return """Thanks for creating an account. To verify your account just follow this link:
-
-<URL>
-
-All the best.
-
-(We'll send this email again soon in case you miss it the first time. If you do not wish
-to complete the action and do not want to get a reminder, please follow this link
-instead to stop future reminders: <KILL_URL>)"""
-	
-	def email_should_resend(self):
-		return True
-=================================================
-
+halts sending of future retries.
 
 A NOTE ON PICKLING
 

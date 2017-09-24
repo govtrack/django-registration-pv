@@ -91,34 +91,6 @@ def validate_email(value, skip_if_this_user=None, for_login=False, fielderrors=N
 			fielderrors["email"] = validation_error_message(e)
 			return value
 
-class ChangeEmailAddressAction:
-	user = None
-	newemail = None
-	
-	def email_subject(self):
-		return settings.APP_NICE_SHORT_NAME + ": Verify Your New Address"
-	def email_body(self):
-		return """To change your """ + settings.APP_NICE_SHORT_NAME + """ account's email address to this address,
-please complete the verification by following this link:
-
-<URL>
-
-All the best,
-
-""" + settings.APP_NICE_SHORT_NAME + """
-"""
-
-	def get_response(self, request, vrec):
-		self.user.email = self.newemail
-		self.user.save()
-		return render_to_response('registration/email_change_complete.html', context_instance=RequestContext(request))
-
-def change_email_address(user, newaddress):
-	axn = ChangeEmailAddressAction()
-	axn.user = user
-	axn.newemail = newaddress
-	send_email_verification(newaddress, None, axn)
-
 def validation_error_message(validationerror):
 	# Turns a ValidationException or a ValueError, KeyError into a string.
 	if not hasattr(validationerror, "messages"):

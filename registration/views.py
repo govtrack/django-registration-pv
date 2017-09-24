@@ -476,24 +476,9 @@ class RegisterUserAction:
 		
 		return HttpResponseRedirect(self.next)
 		
-	def email_subject(self):
-		return settings.APP_NICE_SHORT_NAME + ": Finish Creating Your Account"
-	def email_body(self):
-		return """Thanks for coming to """ + settings.APP_NICE_SHORT_NAME + """. To finish creating your account
-just follow this link:
-
-<URL>
-
-All the best,
-
-""" + settings.APP_NICE_SHORT_NAME + """
-
----
-If you did not request an account, please ignore this email and
-sorry for the inconvenience. We'll send this email again in case
-you missed it the first time. If you do not want to get a reminder,
-please follow this link to stop future reminders:
-<KILL_URL>"""
+	@property
+	def email_template(self): return "registration/email/register"
+	def email_template_context(self): return { "site": settings.APP_NICE_SHORT_NAME }
 
 class DirectLoginBackend(ModelBackend):
 	"""
@@ -531,38 +516,18 @@ class ResetPasswordAction:
 	userid = None
 	email = None
 	def get_response(self, request, vrec):
+		# Log the user in.
 		user = User.objects.get(id = self.userid, email = self.email)
-		
-		# randomize the password
-		newpw = User.objects.make_random_password(length=8, allowed_chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789')
-		user.set_password(newpw)
-		user.save()
-		
 		user = authenticate(user_object = user)
 		login(request, user)
 		
-		return render(request, 'registration/reset_password_done.html', {
-			"newpassword": newpw,
-			"site_name": settings.APP_NICE_SHORT_NAME,
-			})
+		# Tell them what to do.
+		messages.warning(request, "You have been logged into your account. Please now set a password in the form below.")
+		return HttpResponseRedirect("/accounts/profile")
 		
-	def email_subject(self):
-		return settings.APP_NICE_SHORT_NAME + ": Reset Password"
-	def email_body(self):
-		return """Hello!
-
-You have requested to reset your """ + settings.APP_NICE_SHORT_NAME + """ account password. To
-continue, please follow this link:
-
-<URL>
-
-If it was not you who requested the password reset for this email address,
-just ignore this email.
-
-All the best,
-
-""" + settings.APP_NICE_SHORT_NAME + """
-"""
+	@property
+	def email_template(self): return "registration/email/reset_password"
+	def email_template_context(self): return { "site": settings.APP_NICE_SHORT_NAME }
 
 def resetpassword(request):
 	status = ""
@@ -677,26 +642,6 @@ class ChangeEmailAction:
 		
 		return HttpResponseRedirect("/accounts/profile")
 		
-	def email_subject(self):
-		return settings.APP_NICE_SHORT_NAME + ": Confirm Email Change"
-	def email_body(self):
-		return """Hello!
-
-You have requested to change your """ + settings.APP_NICE_SHORT_NAME + """ account email address. To
-continue, please follow this link:
-
-<URL>
-
-If it was not you who requested the change for this email address,
-just ignore this email.
-
-All the best,
-
-""" + settings.APP_NICE_SHORT_NAME + """
-
-
----
-We'll send this email again in case you missed it the first time. If you do not want
-to get a reminder, please follow this link to stop future reminders:
-<KILL_URL>
-"""
+	@property
+	def email_template(self): return "registration/email/change_email"
+	def email_template_context(self): return { "site": settings.APP_NICE_SHORT_NAME }
