@@ -63,10 +63,7 @@ def validate_username(value, skip_if_this_user=None, for_login=False, fielderror
 	
 def validate_password(value, fielderrors=None):
 	try:
-		value = forms.CharField(min_length=5, error_messages = {'min_length': "The password is too short. It must be at least five characters."}).clean(value)
-		if " " in value:
-			raise forms.ValidationError("Passwords cannot contain spaces.")	
-		return value
+		return forms.CharField(min_length=5, error_messages = {'min_length': "The password is too short. It must be at least five characters."}).clean(value)
 	except forms.ValidationError, e:
 		if fielderrors == None:
 			e.source_field = "password"
