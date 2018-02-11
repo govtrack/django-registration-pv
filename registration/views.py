@@ -126,6 +126,9 @@ def external_start(request, login_associate, provider):
 	if login_associate == "associate" and not request.user.is_authenticated:
 		login_associate = "login"
 
+	if login_associate == "verify":
+		request.session["registration_external_verify"] = None
+
 	if "next" in request.GET:
 		validate_next(request, request.GET["next"]) # raises exception on error
 		request.session["oauth_finish_next"] = request.GET["next"]
@@ -175,6 +178,17 @@ def external_return(request, login_associate, provider):
 
 	# The provider specifies a persistent user ID.
 	uid = providers.providers[provider]["profile_uid"](profile)
+
+	# On "verify" actions, just put the account info in the session and
+	# redirect to the next page.
+	if login_associate == "verify":
+		request.session["registration_external_verify"] = {
+			"provider": provider,
+			"auth_token": auth_token,
+			"profile": profile,
+			"uid": uid,
+		}
+		return HttpResponseRedirect(request.session["oauth_finish_next"] if "oauth_finish_next" in request.session else reverse(loginform))
 
 	# The provider may request that on new accounts we migrate from an old
 	# provider/uid pair.
