@@ -13,12 +13,19 @@ class Command(BaseCommand):
 	
 	def handle(self, *args, **options):
 		for line in sys.stdin:
-			if line.strip() == "": continue
+			line = line.strip()
+			if line == "": continue
 
-			uid = int(line)
-				
+			try:
+				try:
+					u = User.objects.get(id=int(line))
+				except ValueError:
+					u = User.objects.get(email=line)
+			except User.DoesNotExist:
+				print line, "no such user"
+				continue
+
 			# record the bounce
-			u = User.objects.get(id=uid)
 			be, is_new = BouncedEmail.objects.get_or_create(user=u)
 			if not is_new:
 				be.bounces += 1
