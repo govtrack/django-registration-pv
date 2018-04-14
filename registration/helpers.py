@@ -7,37 +7,9 @@ from django import forms
 
 import sys, json
 
-try:
-	import recaptcha.client.captcha
-
-	# due to changes on April 21, 2011, we must use a different api server
-	if recaptcha.client.captcha.API_SSL_SERVER== "https://api-secure.recaptcha.net":
-		# these won't work in newer recaptcha lib because it creates the full path differently
-		recaptcha.client.captcha.API_SSL_SERVER="https://www.google.com/recaptcha/api"
-		recaptcha.client.captcha.API_SERVER="http://www.google.com/recaptcha/api"
-		recaptcha.client.captcha.VERIFY_SERVER="www.google.com/recaptcha/api"
-except ImportError:
-	pass
-
 from emailverification.utils import send_email_verification
 
 from django.conf import settings
-
-def captcha_html(error = None):
-	return recaptcha.client.captcha.displayhtml(settings.RECAPTCHA_PUBLIC_KEY, error = error, use_ssl=True)
-
-def validate_captcha(request):
-	# This may have to be the last check in a form because if the captcha succeeds, the user
-	# cannot resubmit without a new captcha. (I hope. reCAPTCHA should not be open
-	# to replay-attacks.)
-	try:
-		cx = recaptcha.client.captcha.submit(request.POST["recaptcha_challenge_field"], request.POST["recaptcha_response_field"], settings.RECAPTCHA_PRIVATE_KEY, request.META["REMOTE_ADDR"])
-	except Exception, e:
-		raise forms.ValidationError("There was an error processing the CAPTCHA.")
-	if not cx.is_valid:
-		e = forms.ValidationError("Please try the two reCAPTCHA words again. If you have trouble recognizing the words, try clicking the new challenge button to get a new pair of words to type.")
-		e.recaptcha_error = cx.error_code
-		raise e
 
 def validate_username(value, skip_if_this_user=None, for_login=False, fielderrors=None):
 	try:

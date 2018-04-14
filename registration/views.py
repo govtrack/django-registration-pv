@@ -13,7 +13,7 @@ from emailverification.utils import send_email_verification
 
 import providers
 from models import *
-from helpers import validate_username, validate_password, validate_email, captcha_html, validate_captcha
+from helpers import validate_username, validate_password, validate_email
 from helpers import json_response, validation_error_message
 
 from django.conf import settings
@@ -546,9 +546,20 @@ class ResetPasswordAction:
 def resetpassword(request):
 	status = ""
 	if request.POST.get("email", "").strip() != "":
-		try:
-			validate_captcha(request)
-			
+		# Valid reCAPTCHA.
+		import urllib, json
+		ret = json.load(urllib.urlopen(
+			"https://www.google.com/recaptcha/api/siteverify",
+			data=urllib.urlencode({
+				"secret": settings.RECAPTCHA_SECRET_KEY,
+				"response": request.POST.get("g-recaptcha-response", ""),
+				"remoteip": request.META['REMOTE_ADDR'],
+			})))
+		
+		if not ret.get("success"):
+			status = "; ".join(ret.get("error-codes", [])) + ". If you can't past this point, please contact us using the contact link at the bottom of this page."
+
+		else:
 			try:
 				user = User.objects.get(email = request.POST["email"].strip())
 				
@@ -559,16 +570,12 @@ def resetpassword(request):
 				send_email_verification(user.email, None, axn)
 			except:
 				pass
-			
+		
 			status = "We've sent an email to that address with further instructions. If you do not receive an email, 1) check your junk mail folder and 2) make sure you correctly entered the address that you registered on this site."
 			
-		except:
-			status = "The reCAPTCHA validation words you typed weren't right."
-		
 	return render(request, 'registration/reset_password.html', {
 		"status": status,
-		"captcha": captcha_html(),
-		"site_name": settings.APP_NICE_SHORT_NAME,
+		"RECAPTCHA_SITE_KEY": settings.RECAPTCHA_SITE_KEY,
 		})
 
 @login_required
