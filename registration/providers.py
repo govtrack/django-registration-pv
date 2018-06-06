@@ -1,6 +1,6 @@
 #;encoding=utf-8
 
-import urlparse, urllib
+import urllib.parse, urllib.request, urllib.parse, urllib.error
 import json, base64, random, string
 from xml.dom import minidom
 
@@ -189,7 +189,7 @@ except:
 
 try:
 	def facebook_get_profile(access_token):
-		ret = urllib.urlopen("https://graph.facebook.com/me?" + urllib.urlencode({"access_token": access_token["access_token"]}))
+		ret = urllib.request.urlopen("https://graph.facebook.com/me?" + urllib.parse.urlencode({"access_token": access_token["access_token"]}))
 		if ret.getcode() != 200:
 			raise Exception("Invalid response from Facebook on obtaining profile information.")
 		profile = json.loads(ret.read())
@@ -234,7 +234,7 @@ except ImportError:
 	pass
 
 def openid2_get_redirect(request, provider, callback, scope, mode):
-	xrds = urllib.urlopen(providers[provider]["xrds"])
+	xrds = urllib.request.urlopen(providers[provider]["xrds"])
 	if xrds.getcode() != 200:
 		raise Exception("OpenID Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a XRDS information: " + xrds.read())
 	xrds = xrds.read()
@@ -249,8 +249,8 @@ def openid2_get_redirect(request, provider, callback, scope, mode):
 	auth = consumer.beginWithoutDiscovery(service)
 	
 	if "extensions" in providers[provider]:
-		for ext, d in providers[provider]["extensions"].iteritems():
-			for k, v in d.iteritems():
+		for ext, d in providers[provider]["extensions"].items():
+			for k, v in d.items():
 				auth.addExtensionArg(ext, k, v) 
 				
 	if mode == "compact": # works with Google
@@ -304,15 +304,15 @@ def oauth1_get_redirect(request, provider, callback, scope, mode):
 			else:
 				body["scope"] = scope
 
-	resp, content = client.request(providers[provider]["request_token_url"], "POST", body= urllib.urlencode(body))
+	resp, content = client.request(providers[provider]["request_token_url"], "POST", body= urllib.parse.urlencode(body))
 	
 	if resp['status'] != '200':
 		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a request token: " + content)
 	
-	request.session["oauth_request_token"] = dict(urlparse.parse_qsl(content))
+	request.session["oauth_request_token"] = dict(urllib.parse.parse_qsl(content))
 	request.session["oauth_request_token"]["provider"] = provider
 	
-	url = providers[provider]["authenticate_url"] + "?" + urllib.urlencode(
+	url = providers[provider]["authenticate_url"] + "?" + urllib.parse.urlencode(
 		{
 			"oauth_token": request.session['oauth_request_token']['oauth_token'],
 		})
@@ -333,7 +333,7 @@ def oauth1_finish_authentication(request, provider, original_callback):
 	if resp['status'] != '200':
 		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining an access token: " + content)
 
-	access_token = dict(urlparse.parse_qsl(content))
+	access_token = dict(urllib.parse.parse_qsl(content))
 	profile = providers[provider]["load_profile"](access_token)
 	
 	return (provider, access_token, profile)
@@ -375,7 +375,7 @@ def oauth2_get_redirect(request, provider, callback, scope, mode):
 	body["state"] = ''.join(random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(32))
 	request.session["registration-oauth2-" + provider + "-state"] = body["state"]
 	
-	url = providers[provider]["authenticate_url"] + "?" + urllib.urlencode(body)
+	url = providers[provider]["authenticate_url"] + "?" + urllib.parse.urlencode(body)
 	return url
 	
 def oauth2_finish_authentication(request, provider, original_callback):
@@ -409,9 +409,9 @@ def oauth2_finish_authentication(request, provider, original_callback):
 
 
 	if providers[provider]["access_token_method"] == "GET":
-		ret = urllib.urlopen(providers[provider]["access_token_url"] + "?" + urllib.urlencode(qsargs))
+		ret = urllib.request.urlopen(providers[provider]["access_token_url"] + "?" + urllib.parse.urlencode(qsargs))
 	else:
-		ret = urllib.urlopen(providers[provider]["access_token_url"], urllib.urlencode(qsargs))
+		ret = urllib.request.urlopen(providers[provider]["access_token_url"], urllib.parse.urlencode(qsargs))
 
 	if ret.getcode() != 200:
 		raise Exception("OAuth2 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining an access token: " + ret.read())
@@ -423,7 +423,7 @@ def oauth2_finish_authentication(request, provider, original_callback):
 		access_token = json.loads(ret)
 	else:
 		# Facebook
-		access_token = dict(urlparse.parse_qsl(ret))
+		access_token = dict(urllib.parse.parse_qsl(ret))
 
 	profile = providers[provider]["load_profile"](access_token)
 	

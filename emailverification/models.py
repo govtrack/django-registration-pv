@@ -35,7 +35,7 @@ class Record(models.Model):
 	
 	def __unicode__(self):
 		try:
-			a = unicode(self.get_action())
+			a = str(self.get_action())
 		except:
 			a = "(invalid action data)"
 		return self.email + ": " + a

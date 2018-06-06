@@ -1,6 +1,6 @@
 from htmlemailer import send_mail
 
-from models import *
+from .models import *
 
 from datetime import datetime, timedelta
 
@@ -44,7 +44,7 @@ def resend_verifications(test=True):
 	# far, starting with zero. Each level has a different delay time since the
 	# last send.
 	search = None
-	for retries in xrange(len(RETRY_DELAYS)):
+	for retries in range(len(RETRY_DELAYS)):
 		q = Record.objects.filter(
 			retries = retries,
 			hits = 0,
@@ -69,17 +69,17 @@ def resend_verifications(test=True):
 		if not action.email_should_resend():
 			continue
 			
-		print rec.retries, rec.created, rec.last_send, rec,
+		print(rec.retries, rec.created, rec.last_send, rec, end=' ')
 		if test:
-			print "test"
+			print("test")
 			continue
 		else:
-			print
+			print()
 		
 		try:
 			send_record_email(rec.email, action, rec)
 		except Exception as e:
-			print "\tfailed:", e
+			print("\tfailed:", e)
 			continue
 			
 		rec.retries += 1

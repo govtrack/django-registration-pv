@@ -25,7 +25,7 @@ def validate_username(value, skip_if_this_user=None, for_login=False, fielderror
 				raise forms.ValidationError("The username is already taken.")
 			
 		return value
-	except forms.ValidationError, e:
+	except forms.ValidationError as e:
 		if fielderrors == None:
 			e.source_field = "username"
 			raise e
@@ -36,7 +36,7 @@ def validate_username(value, skip_if_this_user=None, for_login=False, fielderror
 def validate_password(value, fielderrors=None):
 	try:
 		return forms.CharField(min_length=5, error_messages = {'min_length': "The password is too short. It must be at least five characters."}).clean(value)
-	except forms.ValidationError, e:
+	except forms.ValidationError as e:
 		if fielderrors == None:
 			e.source_field = "password"
 			raise e
@@ -52,7 +52,7 @@ def validate_email(value, skip_if_this_user=None, for_login=False, fielderrors=N
 			if len(users) > 0 and users[0] != skip_if_this_user:
 				raise forms.ValidationError("If that's your email address, it looks like you're already registered. You can try logging in instead.")
 		return value
-	except forms.ValidationError, e:
+	except forms.ValidationError as e:
 		if fielderrors == None:
 			e.source_field = "email"
 			raise e
@@ -63,11 +63,11 @@ def validate_email(value, skip_if_this_user=None, for_login=False, fielderrors=N
 def validation_error_message(validationerror):
 	# Turns a ValidationException or a ValueError, KeyError into a string.
 	if not hasattr(validationerror, "messages"):
-		return unicode(validationerror)
+		return str(validationerror)
 
 	from django.utils.encoding import force_unicode
 	#m = e.messages.as_text()
-	m = u'; '.join([force_unicode(g) for g in validationerror.messages])
+	m = '; '.join([force_unicode(g) for g in validationerror.messages])
 	if m.strip() == "":
 		m = "Invalid value."
 	return m
@@ -83,20 +83,20 @@ def json_response(f):
 			resp = HttpResponse(ret, content_type="application/json")
 			resp["Content-Length"] = len(ret)
 			return resp
-		except ValueError, e:
-			sys.stderr.write(unicode(e) + "\n")
-			return HttpResponse(json.dumps({ "status": "fail", "msg": unicode(e) }), content_type="application/json")
-		except forms.ValidationError, e :
+		except ValueError as e:
+			sys.stderr.write(str(e) + "\n")
+			return HttpResponse(json.dumps({ "status": "fail", "msg": str(e) }), content_type="application/json")
+		except forms.ValidationError as e :
 			m = validation_error_message(e)
-			sys.stderr.write(unicode(m) + "\n")
+			sys.stderr.write(str(m) + "\n")
 			return HttpResponse(json.dumps({ "status": "fail", "msg": m, "field": getattr(e, "source_field", None) }), content_type="application/json")
-		except Exception, e:
+		except Exception as e:
 			if settings.DEBUG:
 				import traceback
 				traceback.print_exc()
 			else:
-				sys.stderr.write(unicode(e) + "\n")
+				sys.stderr.write(str(e) + "\n")
 				raise
-			return HttpResponseServerError(json.dumps({ "status": "generic-failure", "msg": unicode(e) }), content_type="application/json")
+			return HttpResponseServerError(json.dumps({ "status": "generic-failure", "msg": str(e) }), content_type="application/json")
 	return g
 	

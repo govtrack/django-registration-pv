@@ -22,7 +22,7 @@ class Command(BaseCommand):
 				except ValueError:
 					u = User.objects.get(email=line)
 			except User.DoesNotExist:
-				print line, "no such user"
+				print(line, "no such user")
 				continue
 
 			# record the bounce
@@ -30,4 +30,4 @@ class Command(BaseCommand):
 			if not is_new:
 				be.bounces += 1
 				be.save()
-			print u, be
+			print(u, be)

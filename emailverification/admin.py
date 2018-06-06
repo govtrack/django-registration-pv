@@ -1,4 +1,4 @@
-from models import *
+from .models import *
 from django.contrib import admin
 
 class RecordAdmin(admin.ModelAdmin):
@@ -10,7 +10,7 @@ class RecordAdmin(admin.ModelAdmin):
 		return obj.url()
 
 	def description(self, obj):
-		return unicode(obj.get_action())
+		return str(obj.get_action())
 
 class PingAdmin(admin.ModelAdmin):
 	readonly_fields = ("user",)

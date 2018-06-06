@@ -7,14 +7,14 @@ from django.contrib.auth.backends import ModelBackend
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-import urlparse, random
+import urllib.parse, random
 
 from emailverification.utils import send_email_verification
 
-import providers
-from models import *
-from helpers import validate_username, validate_password, validate_email
-from helpers import json_response, validation_error_message
+from . import providers
+from .models import *
+from .helpers import validate_username, validate_password, validate_email
+from .helpers import json_response, validation_error_message
 
 from django.conf import settings
 
@@ -25,13 +25,13 @@ def loginform(request):
 		email = None
 		try:
 			email = forms.EmailField().clean(request.POST["email"])
-		except forms.ValidationError, e:
+		except forms.ValidationError as e:
 			errors = "That's not a valid email address."
 			
 		password = None
 		try:
 			password = forms.CharField().clean(request.POST["password"])
-		except forms.ValidationError, e:
+		except forms.ValidationError as e:
 			#print e
 			pass
 	
@@ -44,7 +44,7 @@ def loginform(request):
 						try:
 							validate_next(request, request.POST["next"]) # raises exception on error
 							return HttpResponseRedirect(request.POST["next"])
-						except Exception, e:
+						except Exception as e:
 							#print e
 							pass # fall through
 					return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
@@ -67,7 +67,7 @@ def logoutview(request):
 	try:
 		validate_next(request, request.GET["next"]) # raises exception on error
 		return HttpResponseRedirect(request.GET["next"])
-	except Exception, e:
+	except Exception as e:
 		pass # fall through
 
 	return render(request, 'registration/loggedout.html', {})
@@ -101,7 +101,7 @@ def validate_next(request, next):
 	# our domain but to a page that will re-load the widget. Sooooo... we'll allow
 	# unrestricted next= if the referer is on our domain. (nb. <base target="_top"/>)
 	try:
-		if urlparse.urlparse(request.META.get("HTTP_REFERER", "http://www.example.org/")).hostname == urlparse.urlparse(settings.SITE_ROOT_URL).hostname:
+		if urllib.parse.urlparse(request.META.get("HTTP_REFERER", "http://www.example.org/")).hostname == urllib.parse.urlparse(settings.SITE_ROOT_URL).hostname:
 			return
 	except: # invalid referrer header
 		pass
@@ -166,7 +166,7 @@ def external_return(request, login_associate, provider):
 	except providers.UserCancelledAuthentication:
 		request.goal = { "goal": "oauth-cancel" }
 		return HttpResponseRedirect(request.session["oauth_finish_next"] if "oauth_finish_next" in request.session else reverse(loginform))
-	except Exception, e:
+	except Exception as e:
 		# Error might indicate a protocol error or else the user denied the
 		# authorization. If finish_authentication returns None, a TypeError
 		# is raised in trying to assign it to the tuple above.
@@ -367,7 +367,7 @@ def registration_utility(request, provider, profile, axn):
 	if username:
 		try:
 			username = validate_username(username)
-		except Exception, e:
+		except Exception as e:
 			if settings.REGISTRATION_ASK_USERNAME:
 				errors["username"] = validation_error_message(e)
 			else:
@@ -385,7 +385,7 @@ def registration_utility(request, provider, profile, axn):
 	if email:
 		try:
 			email = validate_email(email)
-		except Exception, e:
+		except Exception as e:
 			errors["email"] = validation_error_message(e)
 	elif request.method == "POST":
 		errors["email"] = "Provide an email address."
@@ -395,7 +395,7 @@ def registration_utility(request, provider, profile, axn):
 		if request.method == "POST":
 			try:
 				password = validate_password(request.POST.get("password", ""))
-			except Exception, e:
+			except Exception as e:
 				errors["password"] = validation_error_message(e)
 
 	if len(errors) > 0 or request.method != "POST":
@@ -547,10 +547,10 @@ def resetpassword(request):
 	status = ""
 	if request.POST.get("email", "").strip() != "":
 		# Valid reCAPTCHA.
-		import urllib, json
-		ret = json.load(urllib.urlopen(
+		import urllib.request, urllib.parse, urllib.error, json
+		ret = json.load(urllib.request.urlopen(
 			"https://www.google.com/recaptcha/api/siteverify",
-			data=urllib.urlencode({
+			data=urllib.parse.urlencode({
 				"secret": settings.RECAPTCHA_SECRET_KEY,
 				"response": request.POST.get("g-recaptcha-response", ""),
 				"remoteip": request.META['REMOTE_ADDR'],
@@ -588,14 +588,14 @@ def profile(request):
 		if request.POST.get("email", "").strip() != "":
 			try:
 				email = validate_email(request.POST.get("email", ""), skip_if_this_user=request.user)
-			except Exception, e:
+			except Exception as e:
 				errors["email"] = validation_error_message(e)
 	
 		password = None
 		if request.POST.get("password", "").strip() != "":
 			try:
 				password = validate_password(request.POST.get("password", ""))
-			except Exception, e:
+			except Exception as e:
 				errors["password"] = validation_error_message(e)
 
 		username = None
@@ -603,7 +603,7 @@ def profile(request):
 			if request.POST.get("username", "").strip() != request.user.username:
 				try:
 					username = validate_username(request.POST.get("username", ""))
-				except Exception, e:
+				except Exception as e:
 					errors["username"] = validation_error_message(e)
 
 		if len(errors) == 0:

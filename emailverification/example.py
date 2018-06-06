@@ -4,7 +4,7 @@
 
 import sys
 if len(sys.argv) < 2:
-	print "Specify an email address on the command line."
+	print("Specify an email address on the command line.")
 	sys.exit(0)
 
 to_addr = sys.argv[1]

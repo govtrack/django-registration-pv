@@ -101,6 +101,6 @@ class Command(BaseCommand):
 		server.close()
 		server.logout()
 		
-		print "Bounces by status code:"
-		for k, v in sorted(bounces_by_status.items(), key = lambda kv : kv[1], reverse=True):
-			print v, "\t", k
+		print("Bounces by status code:")
+		for k, v in sorted(list(bounces_by_status.items()), key = lambda kv : kv[1], reverse=True):
+			print(v, "\t", k)
