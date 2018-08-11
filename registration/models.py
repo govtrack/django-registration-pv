@@ -12,7 +12,7 @@ class AuthRecord(models.Model):
 	uid = models.CharField(max_length=128)
 	
 	# The Django User associated with the provider-uid pair.
-	user = models.ForeignKey(User, related_name="singlesignon", db_index=True)
+	user = models.ForeignKey(User, related_name="singlesignon", db_index=True, on_delete=models.CASCADE)
 	
 	# Profile information returned by the most recent OAuth callback, etc.
 	auth_token = PickledObjectField()

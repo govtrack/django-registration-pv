@@ -1,6 +1,6 @@
 from django import forms
 from django.http import HttpResponseNotFound, HttpResponseRedirect, HttpResponse
-from django.core.urlresolvers import reverse, resolve
+from django.urls import reverse, resolve
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.backends import ModelBackend

@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.sites.models import Site
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -68,7 +68,7 @@ def make_key():
 class Ping(models.Model):
 	"""A record to verify that an email address is still valid using a pingback."""
 
-	user = models.OneToOneField(User, db_index=True)
+	user = models.OneToOneField(User, db_index=True, on_delete=models.CASCADE)
 	key = models.CharField(max_length=12, db_index=True, unique=True, default=make_key)
 	pingtime = models.DateTimeField(blank=True, null=True)
 	
@@ -80,7 +80,7 @@ class Ping(models.Model):
 class BouncedEmail(models.Model):
 	"""A record of a bounced email to a user."""
 
-	user = models.OneToOneField(User, db_index=True)
+	user = models.OneToOneField(User, db_index=True, on_delete=models.CASCADE)
 	firstbouncetime = models.DateTimeField(auto_now_add=True)
 	bounces = models.IntegerField(default=1)
 	
