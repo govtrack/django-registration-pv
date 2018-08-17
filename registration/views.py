@@ -548,13 +548,13 @@ def resetpassword(request):
 	if request.POST.get("email", "").strip() != "":
 		# Valid reCAPTCHA.
 		import urllib.request, urllib.parse, urllib.error, json
-		ret = json.load(urllib.request.urlopen(
+		ret = json.loads(urllib.request.urlopen(
 			"https://www.google.com/recaptcha/api/siteverify",
 			data=urllib.parse.urlencode({
 				"secret": settings.RECAPTCHA_SECRET_KEY,
 				"response": request.POST.get("g-recaptcha-response", ""),
 				"remoteip": request.META['REMOTE_ADDR'],
-			})))
+			}).encode("utf8")).read().decode("utf8"))
 		
 		if not ret.get("success"):
 			status = "; ".join(ret.get("error-codes", [])) + ". If you can't past this point, please contact us using the contact link at the bottom of this page."

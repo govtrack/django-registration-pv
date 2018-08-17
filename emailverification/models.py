@@ -44,10 +44,10 @@ class Record(models.Model):
 		self.code = ''.join(random.choice(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")) for x in range(CODE_LENGTH))
 
 	def set_action(self, action):
-		self.action = base64.encodestring(pickle.dumps(action))
+		self.action = base64.encodestring(pickle.dumps(action)).decode("ascii")
 		
 	def get_action(self):
-		return pickle.loads(base64.decodestring(self.action))
+		return pickle.loads(base64.decodestring(self.action.encode("ascii")))
 
 	def is_expired(self):
 		if (timezone.now() - self.created).days >= EXPIRATION_DAYS:

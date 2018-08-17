@@ -65,9 +65,8 @@ def validation_error_message(validationerror):
 	if not hasattr(validationerror, "messages"):
 		return str(validationerror)
 
-	from django.utils.encoding import force_unicode
 	#m = e.messages.as_text()
-	m = '; '.join([force_unicode(g) for g in validationerror.messages])
+	m = '; '.join([str(g) for g in validationerror.messages])
 	if m.strip() == "":
 		m = "Invalid value."
 	return m
