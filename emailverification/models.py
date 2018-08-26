@@ -63,7 +63,7 @@ class Record(models.Model):
 
 def make_key():
 	import os, string
-	return "".join( string.letters[ord(b) % len(string.letters)] for b in os.urandom(12) )
+	return "".join( string.ascii_letters[b % len(string.ascii_letters)] for b in os.urandom(12) )
 
 class Ping(models.Model):
 	"""A record to verify that an email address is still valid using a pingback."""
