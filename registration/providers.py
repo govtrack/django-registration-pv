@@ -1,5 +1,3 @@
-#;encoding=utf-8
-
 import urllib.parse, urllib.request, urllib.parse, urllib.error
 import json, base64, random, string
 from xml.dom import minidom
@@ -51,7 +49,7 @@ try:
 		resp, content = client.request("https://api.twitter.com/1.1/users/show.json?user_id=" + access_token['user_id'], "GET")
 		if resp['status'] != '200':
 			raise Exception("OAuth Failed: Invalid response from Twitter on loading profile information.")
-		return json.loads(content)
+		return json.loads(content.decode("utf8"))
 		
 	providers["twitter"] = \
 		{	"displayname": "Twitter",
@@ -118,9 +116,9 @@ try:
 	def google_get_profile2(access_token):
 		# Parse the id_token. Since we just got it over https, we will skip the
 		# crypto part.
-		b = access_token["id_token"].encode("ascii").split(".")[1] # JWT, which is three base64 encoded payloads separated by periods, and the middle payload is the main part
-		b += '=' * (-len(b) % 4) # add back missing padding
-		body = json.loads(base64.b64decode(b, '-_'))
+		b = access_token["id_token"].encode("ascii").split(b".")[1] # JWT, which is three base64 encoded payloads separated by periods, and the middle payload is the main part
+		b += b'=' * (-len(b) % 4) # add back missing padding
+		body = json.loads(base64.b64decode(b, '-_').decode("utf8"))
 		if not body.get("email_verified", False): body["email"] = None
 		return body
 		
@@ -192,7 +190,7 @@ try:
 		ret = urllib.request.urlopen("https://graph.facebook.com/me?" + urllib.parse.urlencode({"access_token": access_token["access_token"]}))
 		if ret.getcode() != 200:
 			raise Exception("Invalid response from Facebook on obtaining profile information.")
-		profile = json.loads(ret.read())
+		profile = json.loads(ret.read().decode("utf8"))
 		# normalize to get a default screen name field
 		profile["screen_name"] = profile["name"].replace(" ", "")
 		return profile
@@ -304,12 +302,12 @@ def oauth1_get_redirect(request, provider, callback, scope, mode):
 			else:
 				body["scope"] = scope
 
-	resp, content = client.request(providers[provider]["request_token_url"], "POST", body= urllib.parse.urlencode(body))
+	resp, content = client.request(providers[provider]["request_token_url"], "POST", body=urllib.parse.urlencode(body))
 	
 	if resp['status'] != '200':
-		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a request token: " + content)
+		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a request token for " + repr(body) + ": " + repr(content))
 	
-	request.session["oauth_request_token"] = dict(urllib.parse.parse_qsl(content))
+	request.session["oauth_request_token"] = dict(urllib.parse.parse_qsl(content.decode("utf8")))
 	request.session["oauth_request_token"]["provider"] = provider
 	
 	url = providers[provider]["authenticate_url"] + "?" + urllib.parse.urlencode(
@@ -333,7 +331,7 @@ def oauth1_finish_authentication(request, provider, original_callback):
 	if resp['status'] != '200':
 		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining an access token: " + content)
 
-	access_token = dict(urllib.parse.parse_qsl(content))
+	access_token = dict(urllib.parse.parse_qsl(content.decode("utf8")))
 	profile = providers[provider]["load_profile"](access_token)
 	
 	return (provider, access_token, profile)
@@ -411,7 +409,7 @@ def oauth2_finish_authentication(request, provider, original_callback):
 	if providers[provider]["access_token_method"] == "GET":
 		ret = urllib.request.urlopen(providers[provider]["access_token_url"] + "?" + urllib.parse.urlencode(qsargs))
 	else:
-		ret = urllib.request.urlopen(providers[provider]["access_token_url"], urllib.parse.urlencode(qsargs))
+		ret = urllib.request.urlopen(providers[provider]["access_token_url"], urllib.parse.urlencode(qsargs).encode("utf8"))
 
 	if ret.getcode() != 200:
 		raise Exception("OAuth2 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining an access token: " + ret.read())
@@ -420,7 +418,7 @@ def oauth2_finish_authentication(request, provider, original_callback):
 
 	if mime_type == "application/json":
 		# Google
-		access_token = json.loads(ret)
+		access_token = json.loads(ret.decode("utf8"))
 	else:
 		# Facebook
 		access_token = dict(urllib.parse.parse_qsl(ret))
