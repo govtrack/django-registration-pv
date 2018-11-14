@@ -305,7 +305,7 @@ def oauth1_get_redirect(request, provider, callback, scope, mode):
 	resp, content = client.request(providers[provider]["request_token_url"], "POST", body=urllib.parse.urlencode(body))
 	
 	if resp['status'] != '200':
-		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a request token for " + repr(body) + ": " + repr(content))
+		raise Exception("OAuth1 Failed: Invalid response from " + providers[provider]["displayname"] + " on obtaining a request token: " + repr(content))
 	
 	request.session["oauth_request_token"] = dict(urllib.parse.parse_qsl(content.decode("utf8")))
 	request.session["oauth_request_token"]["provider"] = provider
