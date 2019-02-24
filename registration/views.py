@@ -36,7 +36,7 @@ def loginform(request):
 			pass
 	
 		if email != None and password != None:
-			user = authenticate(email=email, password=password)
+			user = authenticate(request, email=email, password=password)
 			if user is not None:
 				if user.is_active:
 					login(request, user)
@@ -81,7 +81,7 @@ class EmailPasswordLoginBackend(ModelBackend):
 	supports_object_permissions = False
 	supports_anonymous_user = False
 
-	def authenticate(self, email = None, password = None):
+	def authenticate(self, request, email=None, password=None):
 		try:
 			user = User.objects.get(email=email)
 			if user.check_password(password):
@@ -505,7 +505,7 @@ class DirectLoginBackend(ModelBackend):
 	supports_object_permissions = False
 	supports_anonymous_user = False
 
-	def authenticate(self, user_object = None):
+	def authenticate(self, request, user_object=None):
 		if not user_object.is_active:
 			return None
 		return user_object
