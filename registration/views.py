@@ -38,7 +38,11 @@ def loginform(request):
 		if email != None and password != None:
 			user = authenticate(request, email=email, password=password)
 			if user is not None:
-				if user.is_active:
+				if not user.is_active:
+					errors = "Your account has been disabled!"
+				elif user.is_staff or user.is_superuser: # the email/password backend already checked this
+					errors = "Staff cannot log in this way."
+				else:
 					login(request, user)
 					if request.POST.get("next","").strip() != "":
 						try:
@@ -48,8 +52,6 @@ def loginform(request):
 							#print e
 							pass # fall through
 					return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
-				else:
-					errors = "Your account has been disabled!"
 			else:
 				errors = "Your email and password were incorrect."
 		    
@@ -77,6 +79,8 @@ class EmailPasswordLoginBackend(ModelBackend):
 	Allows us to log users in with an email address instead of a username.
 	
 	This backend is registered with Django automatically by __init__.py.
+	Staff login is not permitted this way so that it can be customized
+	elsewhere, e.g. to add an OTP requirement.
 	"""
 	supports_object_permissions = False
 	supports_anonymous_user = False
@@ -84,6 +88,8 @@ class EmailPasswordLoginBackend(ModelBackend):
 	def authenticate(self, request, email=None, password=None):
 		try:
 			user = User.objects.get(email=email)
+			if user.is_staff or user.is_superuser:
+				return None # admin login required
 			if user.check_password(password):
 				return user
 		except:
@@ -239,7 +245,8 @@ def external_return(request, login_associate, provider):
 			rec.profile = profile
 			rec.save()
 			
-			if user != request.user: # new AuthRecord for existing account
+			# new AuthRecord for existing account --- log the user in, but not staff because that requires an admin login (see elsewhere)
+			if user != request.user and not user.is_staff and not user.is_superuser:
 				if request.user.is_authenticated: # avoid clearing session state
 					logout(request)
 				user = authenticate(user_object = user)
@@ -300,6 +307,10 @@ def external_return(request, login_associate, provider):
 			if not rr.user.is_active:
 				# Can't log in an inactive user.
 				messages.error(request, "Your account is disabled.")
+				return HttpResponseRedirect(reverse(loginform))
+			if rr.user.is_staff or rr.user.is_superuser:
+				# Can't log in staff -- see elsewhere.
+				messages.error(request, "Staff accounts cannot log in this way.")
 				return HttpResponseRedirect(reverse(loginform))
 				
 			if request.user.is_authenticated:
@@ -461,6 +472,10 @@ class RegisterUserAction:
 		try:
 			# If this user has already been created, just log the user in.
 			user = authenticate(user_object = User.objects.get(email=self.email))
+			if user.is_staff or user.is_superuser:
+				# Can't log in staff.
+				messages.error(request, "Staff accounts cannot log in this way.")
+				return HttpResponseRedirect(reverse(loginform))
 			login(request, user)
 			return HttpResponseRedirect(self.next)
 		except:
@@ -522,6 +537,8 @@ def ajax_login(request):
 		return { "status": "fail", "msg": "That's not a username and password combination we have on file." }
 	elif not user.is_active:
 		return { "status": "fail", "msg": "Your account has been disabled." }
+	elif user.is_staff or user.is_superuser: # the email/password backend already checked this
+		return { "status": "fail", "msg": "Staff cannot log in this way." }
 	else:
 		login(request, user)
 		return { "status": "success" }
@@ -533,6 +550,9 @@ class ResetPasswordAction:
 		# Log the user in.
 		user = User.objects.get(id = self.userid, email = self.email)
 		user = authenticate(user_object = user)
+		if user.is_staff or user.is_superuser:
+			messages.warning(request, "Staff cannot log in this way.")
+			return HttpResponseRedirect("/accounts/profile")
 		login(request, user)
 		
 		# Tell them what to do.
@@ -659,7 +679,8 @@ class ChangeEmailAction:
 		user.save()
 		
 		user = authenticate(user_object = user)
-		login(request, user)
+		if not (user.is_staff or user.is_superuser): # can't log in staff, see elsewhere
+			login(request, user)
 		
 		return HttpResponseRedirect("/accounts/profile")
 		
