@@ -550,6 +550,9 @@ class ResetPasswordAction:
 		# Log the user in.
 		user = User.objects.get(id = self.userid, email = self.email)
 		user = authenticate(user_object = user)
+		if not user: # User.is_active is False
+			messages.warning(request, "Your account has been disabled.")
+			return HttpResponseRedirect("/")
 		if user.is_staff or user.is_superuser:
 			messages.warning(request, "Staff cannot log in this way.")
 			return HttpResponseRedirect("/accounts/profile")
