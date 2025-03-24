@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseServerError
 from django import forms
